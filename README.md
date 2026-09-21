@@ -1,4 +1,4 @@
-# Luxora ERP Automation
+# OTO Tech ERP Automation
 
 Playwright end-to-end tests for the Luxora ERP web application.
 
