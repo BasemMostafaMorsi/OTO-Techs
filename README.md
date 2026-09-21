@@ -36,6 +36,7 @@ Failures retain screenshots, video, and Playwright trace files in `test-results`
 7. User Management employee list, statistics, actions, and create form.
 8. User Management permissions list and assigned-role visibility.
 9. Employee lifecycle: create, preview, update, and export.
+10. Employee permission update, persistence check, and safe restoration.
 
 ## Regression coverage
 
