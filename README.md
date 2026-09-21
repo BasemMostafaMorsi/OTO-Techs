@@ -37,6 +37,7 @@ Failures retain screenshots, video, and Playwright trace files in `test-results`
 8. User Management permissions list and assigned-role visibility.
 9. Employee lifecycle: create, preview, update, and export.
 10. Employee permission update, persistence check, and safe restoration.
+11. Contact lifecycle: create, preview, export, transform, edit, full filter, and delete.
 
 ## Regression coverage
 
