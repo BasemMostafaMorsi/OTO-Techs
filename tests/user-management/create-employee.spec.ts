@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../helpers/test';
 import { login } from '../helpers/auth';
 
 test.describe('User Management - Create Employee', () => {
@@ -13,6 +13,7 @@ test.describe('User Management - Create Employee', () => {
     await expect(page.getByRole('textbox', { name: 'Employee Name *' })).toBeVisible();
     await expect(page.getByRole('textbox', { name: 'Surname *' })).toBeVisible();
     await expect(page.getByRole('textbox', { name: 'Mobile number *' })).toBeVisible();
+    await expect(page.getByRole('textbox', { name: 'Password *', exact: true })).toBeVisible();
     await expect(page.getByRole('textbox', { name: 'Hiring Date' })).toBeVisible();
 
     for (const field of [

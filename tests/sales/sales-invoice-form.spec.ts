@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../helpers/test';
 import { login } from '../helpers/auth';
 
 test.describe('Sales Invoice form', () => {
@@ -6,7 +6,7 @@ test.describe('Sales Invoice form', () => {
     await login(page);
     await page.goto('/en/finance/sales-invoices/invoices/create?tab=items');
 
-    await expect(page.getByText('Create Sales Invoice', { exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Sales Invoice', exact: true })).toBeVisible();
     await expect(page.getByRole('textbox', { name: 'Date *' })).toBeVisible();
     await expect(page.getByRole('combobox', { name: 'Customer name *' })).toBeVisible();
     await expect(page.getByRole('combobox', { name: 'Warehouse Name *' })).toBeVisible();

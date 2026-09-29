@@ -1,12 +1,9 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../helpers/test';
 import { login } from '../helpers/auth';
 
 test.describe('Material Request conversion', () => {
   test('@smoke product data is populated in a Purchase Order', async ({ page }) => {
-    test.fail(
-      true,
-      'Known defect: converted items currently lose UOM, purchase price, and calculated totals.',
-    );
+    test.info().annotations.push({ type: 'known-issue', description: 'Known defect: converted items currently lose UOM, purchase price, and calculated totals.' });
 
     const now = new Date();
     const date = `${String(now.getMonth() + 1).padStart(2, '0')}/${String(
@@ -76,6 +73,8 @@ test.describe('Material Request conversion', () => {
     expect.soft(price, 'Purchase price was not populated').toBeGreaterThan(0);
 
     const netText = await page.getByText(/^Net$/).locator('..').innerText();
-    expect.soft(netText, 'Net total remained zero').not.toContain('0 SAR');
+    // A string check for "0 SAR" also rejects valid totals such as "100 SAR".
+    const net = Number(netText.replace(/,/g, '').match(/-?\d+(?:\.\d+)?/)?.[0]);
+    expect.soft(net, 'Net total must be positive after conversion').toBeGreaterThan(0);
   });
 });

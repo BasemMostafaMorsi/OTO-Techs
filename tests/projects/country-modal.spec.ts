@@ -1,19 +1,16 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../helpers/test';
 import { login } from '../helpers/auth';
 
 test.describe('Project country modal', () => {
   test('@regression modal has a title, field label, and working translation action', async ({
     page,
   }) => {
-    test.fail(
-      true,
-      'Known defect: the Add Country modal has missing labels and its translation icon does not work.',
-    );
+    test.info().annotations.push({ type: 'known-issue', description: 'Country title and label are fixed; the translation action is absent.' });
 
     await login(page);
     await page.goto('/en/contacts/projects/create');
 
-    const country = page.getByRole('combobox', { name: /country/i });
+    const country = page.getByRole('combobox', { name: 'Country', exact: true });
     await country.click();
     await page.getByText('Create new', { exact: true }).click();
 

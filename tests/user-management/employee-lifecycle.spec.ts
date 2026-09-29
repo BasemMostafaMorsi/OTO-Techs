@@ -1,5 +1,6 @@
-import { test, expect, Locator, Page } from '@playwright/test';
+import { test, expect, Locator, Page } from '../helpers/test';
 import fs from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
 import { login } from '../helpers/auth';
 
 async function selectFirstAvailable(
@@ -27,10 +28,7 @@ async function selectFirstAvailable(
 test.describe('User Management - Employee lifecycle', () => {
   test('@e2e create, preview, update, and export an employee', async ({ page }) => {
     test.setTimeout(120_000);
-    test.fail(
-      true,
-      'Known defect: the Preview action routes the user to the employee Edit page.',
-    );
+    test.info().annotations.push({ type: 'known-issue', description: 'Known defect: the Preview action routes the user to the employee Edit page.' });
 
     const suffix = Date.now().toString().slice(-8);
     const originalName = `AUTO Employee ${suffix}`;
@@ -52,6 +50,7 @@ test.describe('User Management - Employee lifecycle', () => {
     await page.getByRole('textbox', { name: 'Surname *' }).fill(surname);
     await page.getByRole('textbox', { name: 'Mobile number *' }).fill(mobile);
     await page.getByRole('textbox', { name: 'Email' }).fill(email);
+    await page.getByRole('textbox', { name: 'Password *', exact: true }).fill(`Qa!${randomUUID()}`);
     await page.getByRole('textbox', { name: 'Hiring Date' }).fill(hiringDate);
 
     await selectFirstAvailable(
@@ -92,6 +91,9 @@ test.describe('User Management - Employee lifecycle', () => {
     await page.waitForURL(new RegExp(`/employees/(?:edit/)?${employeeId}(?:\\?|$)`));
 
     const previewOpenedEdit = page.url().includes('/employees/edit/');
+    await test.info().attach('employee-preview', {
+      body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
+    });
     expect
       .soft(previewOpenedEdit, 'Preview must open a read-only employee details page')
       .toBeFalsy();

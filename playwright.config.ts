@@ -30,6 +30,7 @@ function loadLocalEnvironment(): void {
 
 loadLocalEnvironment();
 const isCI = Boolean(process.env.CI);
+const lightweightArtifacts = process.env.LUXORA_LIGHT_ARTIFACTS === '1';
 
 export default defineConfig({
   testDir: './tests',
@@ -52,10 +53,10 @@ export default defineConfig({
 
   use: {
     baseURL: process.env.BASE_URL ?? 'https://luxora.poweritech.com',
-    headless: false,
-    screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
-    trace: 'retain-on-failure',
+    headless: isCI,
+    screenshot: 'on',
+    video: lightweightArtifacts ? 'off' : 'retain-on-failure',
+    trace: lightweightArtifacts ? 'off' : 'retain-on-failure',
     actionTimeout: 15_000,
     navigationTimeout: 30_000,
     

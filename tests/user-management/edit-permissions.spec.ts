@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../helpers/test';
 import { login } from '../helpers/auth';
 
 test.describe('User Management - Edit permissions', () => {
@@ -22,35 +22,40 @@ test.describe('User Management - Edit permissions', () => {
     await expect(financeCheckbox).toBeVisible();
     const originallyChecked = await financeCheckbox.isChecked();
 
-    await financeCheckbox.click();
-    await expect(financeCheckbox).toBeChecked({ checked: !originallyChecked });
+    try {
+      await financeCheckbox.click();
+      await expect(financeCheckbox).toBeChecked({ checked: !originallyChecked });
 
-    const saveChangedResponse = page.waitForResponse(
-      (response) =>
-        response.request().method() !== 'GET' &&
-        /permission/i.test(response.url()),
-    );
-    await page.getByRole('button', { name: 'Submit', exact: true }).click();
-    expect((await saveChangedResponse).ok()).toBeTruthy();
+      const saveChangedResponse = page.waitForResponse(
+        (response) =>
+          ['POST', 'PUT', 'PATCH'].includes(response.request().method()) &&
+          /permission/i.test(response.url()),
+      );
+      await page.getByRole('button', { name: 'Submit', exact: true }).click();
+      expect((await saveChangedResponse).ok()).toBeTruthy();
 
-    await page.reload();
-    const savedFinanceCheckbox = page.locator('#permissions-form').getByRole('checkbox').nth(5);
-    await expect(savedFinanceCheckbox).toBeChecked({ checked: !originallyChecked });
+      await page.reload();
+      const savedFinanceCheckbox = page.locator('#permissions-form').getByRole('checkbox').nth(5);
+      await expect(savedFinanceCheckbox).toBeChecked({ checked: !originallyChecked });
+    } finally {
+      // Restore even when a persistence assertion fails after the save succeeded.
+      await page.goto(`/en/users/permissions/${employeeId}`);
+      const savedFinanceCheckbox = page.locator('#permissions-form').getByRole('checkbox').nth(5);
+      await expect(savedFinanceCheckbox).toBeVisible();
+      await savedFinanceCheckbox.setChecked(originallyChecked);
 
-    await savedFinanceCheckbox.click();
-    await expect(savedFinanceCheckbox).toBeChecked({ checked: originallyChecked });
+      const restoreResponse = page.waitForResponse(
+        (response) =>
+          ['POST', 'PUT', 'PATCH'].includes(response.request().method()) &&
+          /permission/i.test(response.url()),
+      );
+      await page.getByRole('button', { name: 'Submit', exact: true }).click();
+      expect((await restoreResponse).ok()).toBeTruthy();
 
-    const restoreResponse = page.waitForResponse(
-      (response) =>
-        response.request().method() !== 'GET' &&
-        /permission/i.test(response.url()),
-    );
-    await page.getByRole('button', { name: 'Submit', exact: true }).click();
-    expect((await restoreResponse).ok()).toBeTruthy();
-
-    await page.reload();
-    await expect(page.locator('#permissions-form').getByRole('checkbox').nth(5)).toBeChecked({
-      checked: originallyChecked,
-    });
+      await page.reload();
+      await expect(page.locator('#permissions-form').getByRole('checkbox').nth(5)).toBeChecked({
+        checked: originallyChecked,
+      });
+    }
   });
 });

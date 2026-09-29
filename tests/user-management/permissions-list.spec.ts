@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../helpers/test';
 import { login } from '../helpers/auth';
 
 test.describe('User Management - Permissions list', () => {
@@ -20,7 +20,7 @@ test.describe('User Management - Permissions list', () => {
       await expect(page.getByRole('columnheader', { name: column, exact: true })).toBeVisible();
     }
 
-    expect(await page.getByRole('row').count()).toBeGreaterThan(1);
+    await expect(page.getByRole('row').nth(1)).toBeVisible();
   });
 
   test('@regression search finds the current user and displays the assigned role', async ({ page }) => {

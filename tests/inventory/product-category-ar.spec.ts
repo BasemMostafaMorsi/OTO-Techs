@@ -1,14 +1,11 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../helpers/test';
 import { login } from '../helpers/auth';
 
 test.describe('Product categories - Arabic', () => {
   test('@regression newly created Arabic category is selected and remains available', async ({
     page,
   }) => {
-    test.fail(
-      true,
-      'Known defect: an inline category can be created in Arabic but is not displayed afterwards.',
-    );
+    test.info().annotations.push({ type: 'known-issue', description: 'Known defect: an inline category can be created in Arabic but is not displayed afterwards.' });
 
     const suffix = Date.now().toString().slice(-8);
     const categoryName = `فئة آلية ${suffix}`;

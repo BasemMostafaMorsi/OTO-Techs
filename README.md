@@ -21,7 +21,22 @@ Use a dedicated automation account. Credentials are read from environment variab
 - `npm run test:debug` — open Playwright Inspector.
 - `npm run report` — open the latest HTML report.
 
-Failures retain screenshots, video, and Playwright trace files in `test-results`.
+Every test saves a screenshot in `test-results`. Browser console errors, page
+exceptions, failed requests, and HTTP error responses are attached to the report.
+Failures also retain video and Playwright traces by default. Set
+`LUXORA_LIGHT_ARTIFACTS=1` to keep screenshots and diagnostics without video/traces
+when disk space is limited. Browsers are visible locally and headless in CI.
+
+This repository contains the test suite, not the Luxora application source or a
+local application server. `BASE_URL` selects the application under test.
+Lifecycle tests create `AUTO` data on that application. Contact records are
+deleted in `finally`; permission changes are restored in `finally`. Employee,
+category, and material-request tests retain their generated records.
+
+The contact representative assignment requires a representative in the same
+business tree as the contact. Set `LUXORA_SALES_REP` to that representative's name.
+Without it the first available option is exercised; a tree-membership rejection
+is reported explicitly and must not be mistaken for a confirmed application bug.
 
 ## Current smoke coverage
 
@@ -50,10 +65,10 @@ Failures retain screenshots, video, and Playwright trace files in `test-results`
 7. Employee and permissions-list search behavior.
 8. Employee Area/City parent-field dependencies.
 
-The conversion scenario is marked with `test.fail` because the current application
-has a known defect: UOM is blank, price is zero, and the net total remains zero.
-When the application is fixed, Playwright will report an unexpected pass so the
-known-defect marker can be removed.
+Known defects use `known-issue` annotations rather than `test.fail`. They fail
+normally until fixed, so an unrelated locator, authentication, or setup failure
+cannot be counted as a passing expected failure. Review the actual assertions and
+browser diagnostics when classifying a failure.
 
 ## Next scenarios
 
