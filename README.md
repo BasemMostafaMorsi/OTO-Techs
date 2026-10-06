@@ -33,10 +33,11 @@ Lifecycle tests create `AUTO` data on that application. Contact records are
 deleted in `finally`; permission changes are restored in `finally`. Employee,
 category, and material-request tests retain their generated records.
 
-The contact representative assignment requires a representative in the same
-business tree as the contact. Set `LUXORA_SALES_REP` to that representative's name.
-Without it the first available option is exercised; a tree-membership rejection
-is reported explicitly and must not be mistaken for a confirmed application bug.
+The contact representative assignment step is skipped at the user's request
+because representative/contact tree membership remains unresolved. Its code is
+retained inside a reported skipped step; the rest of the contact lifecycle runs.
+Before re-enabling that step, select a representative in the contact's business
+tree using `LUXORA_SALES_REP` and remove the explicit `step.skip` call.
 
 ## Current smoke coverage
 
@@ -52,7 +53,8 @@ is reported explicitly and must not be mistaken for a confirmed application bug.
 8. User Management permissions list and assigned-role visibility.
 9. Employee lifecycle: create, preview, update, and export.
 10. Employee permission update, persistence check, and safe restoration.
-11. Contact lifecycle: create, preview, export, transform, edit, full filter, and delete.
+11. Contact lifecycle: create, preview, export, edit, full filter, and delete;
+    representative assignment is explicitly skipped.
 
 ## Regression coverage
 
@@ -72,6 +74,79 @@ browser diagnostics when classifying a failure.
 
 ## Next scenarios
 
+Finance requirements and execution status are tracked in
+[docs/finance/STATUS.md](docs/finance/STATUS.md); confirmed discrepancies are in
+[docs/finance/FINDINGS.md](docs/finance/FINDINGS.md).
+`tests/finance/scenarios.ts` is the 45-case requirements inventory, not 45
+implemented tests. Application report tests are currently excluded by user
+request. Run Journal Items with:
+
+```powershell
+$env:LUXORA_LIGHT_ARTIFACTS='1'
+npm test -- tests/finance/accounting/journal-items
+```
+
+Screenshots are saved under `artifacts/finance/`; CSV files and browser
+diagnostics are attached to the test results. The existing environment-managed
+login is required. No finance posting or period close is performed by these
+read-only tests.
+
+Every `npm test` run archives previous Allure results, adds English bug reports
+to failed results (Module, Type, Severity, Priority, Steps to Reproduce, Actual
+Result, Expected Result), generates Allure, and opens it automatically. Browser
+diagnostics remain separate from functional failures. To enrich and reopen an
+existing run, use `npm run report:allure`. Direct `npx playwright test` does not
+run the wrapper; use the npm commands for this workflow.
+
 1. Contact creation and customer/vendor transformation.
 2. Sales and purchase invoice payment-total calculations.
 3. Contact attachments and notes persistence on the details page.
+
+## Test folders follow the ERP navigation
+
+```text
+tests/
+  business-partners/
+    contacts/
+    projects/
+  finance/
+    accounting/
+      journal-entries/
+      journal-items/
+    inventory/
+      products/
+    purchase/
+      material-requests/
+      purchase-orders/
+    sales/
+      invoices/
+    reports/
+      sales-invoice/
+      trial-balance/
+    helpers/
+    unit/
+    scenarios.ts
+  user-management/
+    employees/
+    permissions/
+  system-admin/
+  smoke/
+  helpers/
+  fixtures/
+```
+
+Place new UI tests under the matching ERP module and screen. Shared helpers and
+fixtures remain separate from screen folders; finance utility tests live in
+`finance/unit`. Filenames remain stable so Allure bug classification continues
+to identify the same scenarios.
+
+For Journal Entries without application report checks, select the two files
+explicitly (the historical `journal-validation.spec.ts` still opens Trial Balance):
+
+```powershell
+npm test -- tests/finance/accounting/journal-entries/journal-entries.spec.ts tests/finance/accounting/journal-entries/journal-posting.spec.ts
+```
+
+After the folder reorganization, Playwright discovery found the same 56 tests in
+25 files. Discovery used `--list`; it did not execute application tests or replace
+the latest Allure results.
