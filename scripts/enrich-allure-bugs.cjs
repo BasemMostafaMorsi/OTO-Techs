@@ -2,6 +2,9 @@
 const path = require('node:path');
 
 const cases = [
+  ['vendors.spec.ts', 'Business Partners → Vendors', 'Investigation required / Vendor workflow', 'Untriaged',
+    ['Open Business Partners → Vendors.', 'Execute the named scenario with its unique VEND-E2E vendor where applicable.', 'Save and reopen for persistence checks, or perform the specified list/status action.', 'Compare the failed assertion against the attached screenshot and request evidence.'],
+    'Vendor forms should preserve submitted values and vendor type, reject missing required fields, and apply the selected list and status actions. Confirm the failed step before classifying an application defect.'],
   ['customers.spec.ts', 'Business Partners → Customers', 'Investigation required / Customer workflow', 'Untriaged',
     ['Open Business Partners → Customers.', 'Execute the scenario named in this test using its uniquely named CUST-E2E customer where applicable.', 'Save and reload for persistence checks; use the specified filter, validation, status or list action for other scenarios.', 'Compare the observed result with the failed assertion and attached screenshots.'],
     'Customer forms should preserve submitted values after reload, reject invalid required fields, and apply the selected list actions correctly. Confirm the failed step and distinguish automation or environment failures before classifying an application defect.'],
@@ -52,9 +55,10 @@ function enrich(directory = 'allure-results') {
     const failed = ['failed','broken'].includes(result.status);
     if (!failed && !diagnostics.length) continue;
     let definition = cases.find(([file]) => (result.fullName || '').includes(file));
-    if ((result.fullName || '').includes('customers.spec.ts') && result.name.includes('changing country clears')) {
-      definition = [null, 'Business Partners → Customers → Address Details', 'Functional / Dependent fields', 'Medium',
-        ['Open Business Partners → Customers → Create.', 'Open Address Details.', 'Select Country: Egypt, Area: Cairo, and City: Nasr City.', 'Change Country to Saudi Arabia.', 'Inspect the displayed Area and City selections without saving the customer.'],
+    if (/\b(customers|vendors)\.spec\.ts/.test(result.fullName || '') && result.name.includes('changing country clears')) {
+      const screen = (result.fullName || '').includes('vendors.spec.ts') ? 'Vendors' : 'Customers';
+      definition = [null, `Business Partners → ${screen} → Address Details`, 'Functional / Dependent fields', 'Medium',
+        [`Open Business Partners → ${screen} → Create.`, 'Open Address Details.', 'Select Country: Egypt, Area: Cairo, and City: Nasr City.', 'Change Country to Saudi Arabia.', 'Inspect the displayed Area and City selections without saving the form.'],
         'Changing Country should clear the previously selected Area and City from the visible fields. City should remain disabled until a valid area for the new country is selected. This scenario does not establish whether stale values are submitted or persisted.'];
     } else if ((result.fullName || '').includes('sales-report.spec.ts') && result.name.includes('source invoice fields')) {
       definition = [null, 'Finance → Reports → Sales Invoice', 'Functional / Reconciliation', 'High',
@@ -77,7 +81,7 @@ function enrich(directory = 'allure-results') {
       if (!failures.length) failures.push(result.statusDetails?.message || 'The test did not complete successfully.');
       const csvFailure = failures.some(message=>message.includes('CSV requires unique nonempty column names'));
       const staleAddressFailure = result.name.includes('changing country clears') && failures.some(message=>/Previous country (area|city) must not remain displayed/.test(message));
-      const title = staleAddressFailure ? '[Customers] Changing country leaves previous address selections visible' : csvFailure
+      const title = staleAddressFailure ? `[${(result.fullName || '').includes('vendors.spec.ts') ? 'Vendors' : 'Customers'}] Changing country leaves previous address selections visible` : csvFailure
         ? '[Sales Invoice] Exported Excel/CSV column structure does not match the Sales Invoice report displayed on the UI'
         : `[${moduleName.split(' → ').at(-1)}] ${steps.find(s=>s.status==='failed')?.name || result.name}`;
       const actions = csvFailure ? [
