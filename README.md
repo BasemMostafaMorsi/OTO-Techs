@@ -62,6 +62,12 @@ Customer screen coverage and its explicit limits are documented in
 [docs/CUSTOMERS_COVERAGE_2026-10-06.md](docs/CUSTOMERS_COVERAGE_2026-10-06.md).
 Vendor coverage is documented separately in
 [docs/VENDORS_COVERAGE_2026-10-06.md](docs/VENDORS_COVERAGE_2026-10-06.md).
+Projects coverage and limits are in
+[docs/PROJECTS_COVERAGE_2026-10-07.md](docs/PROJECTS_COVERAGE_2026-10-07.md).
+Customer Categories coverage is in
+[docs/CUSTOMER_CATEGORIES_COVERAGE_2026-10-07.md](docs/CUSTOMER_CATEGORIES_COVERAGE_2026-10-07.md).
+Classifications coverage is in
+[docs/CLASSIFICATIONS_COVERAGE_2026-10-07.md](docs/CLASSIFICATIONS_COVERAGE_2026-10-07.md).
 Run it with `npm test -- tests/business-partners/vendors/vendors.spec.ts`.
 Run the customer suite (without application report tests) using:
 
@@ -71,7 +77,7 @@ npm test -- tests/business-partners/customers/customers.spec.ts tests/business-p
 
 1. Inline Product Category creation in Arabic and immediate selection.
 2. Customer Payment Terms dropdown scroll isolation.
-3. Project Add Country modal labels and translation action.
+3. Project Add Country modal labels, country-name entry and cancellation.
 4. Contact attachment file-type restrictions.
 5. System Admin Finance tree expansion.
 6. System Admin Select All counter behavior and restoration.

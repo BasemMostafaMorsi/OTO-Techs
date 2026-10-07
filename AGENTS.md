@@ -1,5 +1,9 @@
 # Luxora test workflow
 
+- User confirmation (2026-10-07): Projects → Add Country does not require a
+  translation action or Arabic-name field. Their absence is correct behavior;
+  do not report it as a bug or retain assertions requiring them.
+
 - Organize UI tests by ERP module and screen: for example
   `tests/finance/accounting/journal-entries/` and
   `tests/finance/accounting/journal-items/`. Business Partners screens belong

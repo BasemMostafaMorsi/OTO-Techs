@@ -2,6 +2,15 @@
 const path = require('node:path');
 
 const cases = [
+  ['classifications.spec.ts', 'Business Partners → Contact Settings → Classifications', 'Investigation required / Classification workflow', 'Untriaged',
+    ['Open Business Partners → Contact Settings → Classifications.', 'Execute the named scenario using its unique CLASS-E2E record where applicable.', 'Save and reopen edited values, cancel the indicated action, or apply the selected status/filter.', 'For integration, open the specified Customer or Vendor creation form and select the saved classification.', 'Compare the failed step with screenshots and attached request evidence.'],
+    'Names and descriptions should persist after saving; invalid required fields should prevent submission. Cancellation should preserve existing data, status/filter changes should persist, and saved classifications should be selectable on the specified forms. Confirm the actual failure before classifying an application defect.'],
+  ['customer-categories.spec.ts', 'Business Partners → Contact Settings → Customer Categories', 'Investigation required / Category workflow', 'Untriaged',
+    ['Open Business Partners → Contact Settings → Customer Categories.', 'Execute the named scenario using its unique CAT-E2E category where applicable.', 'Choose the specified category type; save and reopen for persistence checks or apply the specified filter/status action.', 'For customer integration, open Customers → Create, choose the same customer type and inspect/select the category.', 'Review the failed assertion, screenshot and attached request evidence.'],
+    'Category name/type validation, saved values, cancellation, status, filtering and list actions should match the named scenario. A saved category should be selectable on a matching customer form. Confirm the observed failed step before classifying an application defect.'],
+  ['projects.spec.ts', 'Business Partners → Projects', 'Investigation required / Project workflow', 'Untriaged',
+    ['Open Business Partners → Projects.', 'Execute the named scenario; creation uses a unique PROJ-E2E name, customer Basem and Master Service Center.', 'Save and reopen for persistence checks, or apply the named search, filter, address or list action.', 'Compare the observed result with the failed assertion and attached screenshots/request evidence.'],
+    'Required fields should prevent invalid submission; valid projects should preserve their linked customer, service center and entered values after reload. Search, filters, address dependencies and list actions should match the selected inputs. Classify the actual failed step before asserting an application defect.'],
   ['vendors.spec.ts', 'Business Partners → Vendors', 'Investigation required / Vendor workflow', 'Untriaged',
     ['Open Business Partners → Vendors.', 'Execute the named scenario with its unique VEND-E2E vendor where applicable.', 'Save and reopen for persistence checks, or perform the specified list/status action.', 'Compare the failed assertion against the attached screenshot and request evidence.'],
     'Vendor forms should preserve submitted values and vendor type, reject missing required fields, and apply the selected list and status actions. Confirm the failed step before classifying an application defect.'],
@@ -32,9 +41,9 @@ const cases = [
   ['product-category-ar.spec.ts', 'Finance → Inventory → Products / Services (Arabic)', 'Functional / Localization', 'Medium',
     ['Open the Arabic product creation form.', 'Open Category → Create new.', 'Enter a unique category name and short code, then submit.', 'Check the selected category and reopen its dropdown.'],
     'The newly created category should be selected immediately and remain available in the dropdown.'],
-  ['country-modal.spec.ts', 'Business Partners → Projects → Add Country', 'Functional / Localization', 'Medium',
-    ['Open the project creation form.', 'Open Country → Create new.', 'Check the dialog title and field label.', 'Use the Translation / Language action.'],
-    'The dialog should provide the required translation action and display the Arabic name field.'],
+  ['country-modal.spec.ts', 'Business Partners → Projects → Add Country', 'Functional / Dialog', 'Untriaged',
+    ['Open the project creation form.', 'Open Country → Create new.', 'Check Add Country, Country Name and Submit.', 'Enter an unsaved country name and choose Cancel.'],
+    'The dialog should show its country-name field and controls. Cancel should close it without selecting the unsaved country. Translation and Arabic-name fields are not required, as confirmed by the user.'],
   ['material-request-to-order.spec.ts', 'Finance → Purchase → Material Request → Purchase Order', 'Functional / Conversion', 'High',
     ['Create a material request for gold with quantity 20.', 'Save the request.', 'Select Convert to order.', 'Wait for the order form to load and inspect product, quantity, unit, price and net total.'],
     'The converted order should retain the product and quantity and populate unit, purchase price and totals according to product configuration. Product Master settings must be verified before assigning a root cause.'],
