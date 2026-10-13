@@ -1,5 +1,10 @@
 # Luxora test workflow
 
+- User confirmation (2026-10-12): Payment Voucher visibility after confirmed
+  deletion is accepted system behavior, not a bug. Do not require deleted
+  vouchers to disappear from the list or reference search. Preserve deletion
+  response evidence without asserting disappearance.
+
 - User confirmation (2026-10-07): Projects → Add Country does not require a
   translation action or Arabic-name field. Their absence is correct behavior;
   do not report it as a bug or retain assertions requiring them.
@@ -39,3 +44,7 @@
   separate from functional failures and preserve actual test statuses.
 - Save browser screenshots inside the project. Do not deploy application changes
   unless the user explicitly requests deployment.
+
+- User confirmation (2026-10-12): Deleting a Currency keeps it visible and sets
+  its status to Inactive. Verify the inactive status after reload; do not require
+  disappearance or report retained visibility as a bug.

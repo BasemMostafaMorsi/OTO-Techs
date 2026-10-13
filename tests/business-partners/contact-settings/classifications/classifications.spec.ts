@@ -2,11 +2,12 @@
 import {test,expect,Page} from '../../../helpers/test';
 import {login} from '../../../helpers/auth';
 import {mkdir,stat} from 'node:fs/promises';
+import type {Download} from '@playwright/test';
 const base='/en/contacts/configuration/classifications',api='/sales/classifications';
 const row=(page:Page,id:string)=>page.getByRole('row').filter({has:page.getByText('#'+id,{exact:true})});
 const nameField=(page:Page)=>page.getByRole('dialog').getByRole('textbox',{name:'Classification Name *',exact:true});
 async function open(page:Page){
- const p=page.waitForResponse(r=>r.request().method()==='GET'&&r.url().includes(api+'?'));await page.goto(base);const response=await p;expect(response.ok()).toBeTruthy();const data=(await response.json()).data;
+ const p=page.waitForResponse(r=>{const url=new URL(r.url());return r.request().method()==='GET'&&url.pathname.endsWith(api)&&!url.searchParams.get('search')&&!url.searchParams.get('status')&&url.searchParams.get('page')==='1';}).then(async response=>{expect(response.ok()).toBeTruthy();return (await response.json()).data;});await page.goto(base);const data=await p;
  await expect(page.getByRole('button',{name:new RegExp(`^\\d+/${data.meta.total}$`)})).toBeVisible();return data;
 }
 async function search(page:Page,value:string){
@@ -79,7 +80,11 @@ test('@classifications list IDs search reset and download',async({page},info)=>{
  const pages=new Map<number,string[]>(),pending:Promise<void>[]=[];page.on('response',r=>{if(r.ok()&&r.request().method()==='GET'&&r.url().includes(api+'?'))pending.push(r.json().then(b=>{pages.set(b.data.meta.current_page,b.data.collection.map((x:{id:number})=>String(x.id)));}));});
  const data=await open(page);const total=await complete(page);await Promise.all(pending);const ids=await page.getByRole('table').locator('tbody tr').evaluateAll(es=>es.map(e=>e.textContent?.match(/#(\d+)/)?.[1]));expect(new Set(ids).size).toBe(total);expect(ids.slice().sort()).toEqual([...pages.values()].flat().sort());await info.attach('all-classification-ids',{body:JSON.stringify({total,ids}),contentType:'application/json'});
  await search(page,`NO-CLASSIFICATION-${Date.now()}`);await expect(page.getByRole('button',{name:'0/0',exact:true})).toBeVisible();await search(page,'');await expect(page.getByRole('button',{name:new RegExp(`^\\d+/${data.meta.total}$`)})).toBeVisible();
- const p=page.waitForEvent('download');await page.getByRole('button',{name:'Export',exact:true}).click();const download=await p;expect(await download.failure()).toBeNull();const path=info.outputPath(download.suggestedFilename());await download.saveAs(path);expect((await stat(path)).size).toBeGreaterThan(0);await info.attach('classification-export',{path,contentType:'application/octet-stream'});
+ const downloads:Download[]=[];page.on('download',download=>downloads.push(download));const p=page.waitForResponse(r=>new URL(r.url()).pathname===`/api/v1.0${api}/export`);
+ await page.getByRole('button',{name:'Export',exact:true}).click();const response=await p;
+ await info.attach('classification-export-response',{body:JSON.stringify({url:response.url(),status:response.status(),error:response.ok()?undefined:await response.text(),downloads:downloads.length}),contentType:'application/json'});
+ expect(response.ok(),`Classification export must succeed; received HTTP ${response.status()}`).toBeTruthy();await expect.poll(()=>downloads.length).toBeGreaterThan(0);
+ const download=downloads[0];expect(await download.failure()).toBeNull();const path=info.outputPath(download.suggestedFilename());await download.saveAs(path);expect((await stat(path)).size).toBeGreaterThan(0);await info.attach('classification-export',{path,contentType:'application/octet-stream'});
 });
 
 
