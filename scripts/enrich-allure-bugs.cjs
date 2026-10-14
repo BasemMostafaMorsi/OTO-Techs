@@ -2,6 +2,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const cases = [
+  ['product-categories.spec.ts', 'Finance → Inventory → Inventory Management → Product Categories', 'Investigation required / Category workflow', 'Untriaged',
+    ['Open Product Categories.', 'Execute the named validation, cancellation, search or owned CAT-E2E lifecycle scenario.', 'For lifecycle cases save/reopen edits, toggle status, select the category in an unsaved product form, cancel deletion and confirm deletion.', 'Review screenshot and response evidence before classifying a defect.'],
+    'Required fields should validate, saved fields and status should persist, active categories should be selectable in product forms, and cancelled actions should preserve saved data. Record deletion evidence without assuming disappearance.'],
   ['products-services-filters.spec.ts', 'Finance → Inventory → Inventory Management → Products & Services', 'Investigation required / Filters', 'Untriaged',
     ['Open Products & Services and capture the complete baseline.', 'Apply the type, status and/or category named in the test.', 'Compare returned IDs and visible records with matching baseline records.', 'Reset filters and compare the restored list with the baseline.'],
     'Filters should return all and only matching records, and Reset should restore the baseline. Empty Inactive results do not prove positive inactive-record inclusion.'],
