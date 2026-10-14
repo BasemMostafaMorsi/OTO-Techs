@@ -1,0 +1,16 @@
+import {test,expect,Page} from '../../../../helpers/test';
+import {login} from '../../../../helpers/auth';
+import {mkdir} from 'node:fs/promises';
+const base='/en/finance/inventory/transfer/deliveries',folder='artifacts/finance/inventory/transfer/deliveries';
+const field=(p:Page,name:string)=>p.getByRole('textbox',{name,exact:true});
+const lines=(p:Page)=>p.getByRole('row').filter({has:p.getByRole('combobox',{name:'Choose product',exact:true})});
+async function create(p:Page){await p.getByRole('button',{name:'Create',exact:true}).click();await expect(field(p,'Date *')).toBeVisible();await expect(p.getByRole('combobox',{name:'Warehouse name *',exact:true})).not.toHaveValue('');}
+test.beforeEach(async({page})=>{test.setTimeout(90000);await login(page);await page.goto(base);await expect(page.getByRole('button',{name:'more',exact:true}).first()).toBeVisible();});
+test.afterEach(async({page},info)=>{await mkdir(folder,{recursive:true});const path=folder+'/'+info.title.replace(/[^a-z0-9]+/gi,'-')+'.png';await page.screenshot({path,fullPage:true});await info.attach('inventory-delivery-screen',{path,contentType:'image/png'});});
+
+test('blank draft validates counterparty and item fields',async({page})=>{await create(page);await page.getByRole('button',{name:'Save',exact:true}).click();await page.getByRole('menuitem',{name:'Save as Draft',exact:true}).click();await page.keyboard.press('Escape');await expect(page.getByRole('combobox',{name:'Customer / Supplier name *',exact:true})).toHaveAttribute('aria-invalid','true');for(const message of ['Product name is required','Quantity is required'])await expect(page.getByText(message,{exact:true})).toBeVisible();});
+test('delivery defaults and save actions are available',async({page})=>{await create(page);await expect(field(page,'Date *')).toBeEditable();await expect(field(page,'Date *')).toHaveValue(/\d{2}\/\d{2}\/\d{4}/);await expect(page.getByRole('combobox',{name:'Type *',exact:true})).toHaveValue('Customer');await expect(lines(page)).toHaveCount(1);await page.getByRole('button',{name:'Save',exact:true}).click();await expect(page.getByRole('menuitem')).toHaveText(['Validate','Save as Draft']);await page.keyboard.press('Escape');});
+test('add and remove unsaved delivery lines',async({page})=>{await create(page);await page.getByRole('button',{name:'Add new',exact:true}).click();await expect(lines(page)).toHaveCount(2);await lines(page).last().getByRole('cell').last().getByRole('button').click();await expect(lines(page)).toHaveCount(1);});
+test('unsaved reference notes and added line are discarded',async({page})=>{await create(page);await field(page,'Ref No').fill('918273');await field(page,'Notes').fill('Receipt unsaved check');await page.getByRole('button',{name:'Add new',exact:true}).click();await page.goto(base);await create(page);await expect(field(page,'Ref No')).toBeEmpty();await expect(field(page,'Notes')).toBeEmpty();await expect(lines(page)).toHaveCount(1);});
+test('no match search and clear restore delivery rows',async({page})=>{await page.getByPlaceholder('Search',{exact:true}).fill('RECEIPT-NONE-'+Date.now());await expect(page.getByRole('button',{name:'0/0',exact:true})).toBeVisible();await page.getByPlaceholder('Search',{exact:true}).fill('');await expect(page.getByRole('button',{name:'more',exact:true}).first()).toBeVisible();});
+

@@ -2,6 +2,12 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const cases = [
+  ['deliveries.spec.ts', 'Finance → Inventory → Transfer → Deliveries', 'Investigation required / Inventory deliveries', 'Untriaged',
+    ['Open Finance → Inventory → Transfer → Deliveries.', 'Execute the named blank draft, defaults, line management, unsaved navigation or search case.', 'Compare the failed assertion with the attached browser screenshot.'],
+    'Required fields should validate, line operations and search should behave as selected, and unsaved changes should be discarded. No delivery is validated or posted by this suite.'],
+  ['receipts.spec.ts', 'Finance → Inventory → Transfer → Receipts', 'Investigation required / Inventory receipts', 'Untriaged',
+    ['Open Finance → Inventory → Transfer → Receipts.', 'Execute the named defaults, blank draft, unsaved lines, calculation, navigation or search case.', 'For calculation select gold, read its displayed unit price, enter quantity 2 and compare line/grand totals without saving.', 'Compare the failed assertion with screenshots and attached values.'],
+    'Required receipt fields should validate, line totals should equal quantity times price, unsaved changes should be discarded on navigation, and search should match. No receipt is validated or posted by this suite.'],
   ['product-categories.spec.ts', 'Finance → Inventory → Inventory Management → Product Categories', 'Investigation required / Category workflow', 'Untriaged',
     ['Open Product Categories.', 'Execute the named validation, cancellation, search or owned CAT-E2E lifecycle scenario.', 'For lifecycle cases save/reopen edits, toggle status, select the category in an unsaved product form, cancel deletion and confirm deletion.', 'Review screenshot and response evidence before classifying a defect.'],
     'Required fields should validate, saved fields and status should persist, active categories should be selectable in product forms, and cancelled actions should preserve saved data. Record deletion evidence without assuming disappearance.'],
