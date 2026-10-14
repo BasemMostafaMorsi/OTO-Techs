@@ -20,6 +20,14 @@ Screenshots and `service-fixture.json` are under `artifacts/finance/inventory/in
 
 Initial run: 4 passed, 3 failed due to test assumptions. Sales Price becomes Sales Price * after enabling sales; search needed initial list response completion; Service requires an account in Purchase information. Corrected run passed all seven. No functional bug confirmed; diagnostics remain separate.
 
+## Filter follow-up
+
+Follow-up after commit `df09061`: added six baseline-reconciliation filter scenarios, each including Reset. Earlier runs failed before reaching filters because login navigation and screenshots timed out. An attempted DOMContentLoaded workaround was reverted. Historical failures remain archived.
+
+Latest headed rerun: **6 passed**, 55.7 seconds, without changing login behavior. Compared complete baseline IDs with filtered API IDs and visible rows: Product 3, Service 2, Active 5, Inactive 0, Category new 2, combined Service/Active/الرئيسيه 1. Reset restored all five records in every case. Screenshots and reconciliation evidence are attached in Allure. No filter defect confirmed. Inactive covers an empty result only; positive inactive inclusion and pagination remain unverified.
+
+Total distinct passing cases across the initial and filter runs: **13**.
+
 ## Remaining
 
-Product creation, edit/reopen field verification, activation/deactivation, deletion, filters, category integration, tax/discount calculations, image upload, numeric boundaries, opening inventory, warehouse effects, permissions and transaction integration are not covered here. Existing category tests were not rerun. This is not complete module coverage.
+Product creation, edit/reopen field verification, activation/deactivation, deletion, remaining filter combinations/categories, positive inactive filtering, category integration, tax/discount calculations, image upload, numeric boundaries, opening inventory, warehouse effects, permissions and transaction integration are not covered here. Existing category tests were not rerun. This is not complete module coverage.

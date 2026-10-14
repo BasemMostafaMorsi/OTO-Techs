@@ -2,6 +2,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const cases = [
+  ['products-services-filters.spec.ts', 'Finance → Inventory → Inventory Management → Products & Services', 'Investigation required / Filters', 'Untriaged',
+    ['Open Products & Services and capture the complete baseline.', 'Apply the type, status and/or category named in the test.', 'Compare returned IDs and visible records with matching baseline records.', 'Reset filters and compare the restored list with the baseline.'],
+    'Filters should return all and only matching records, and Reset should restore the baseline. Empty Inactive results do not prove positive inactive-record inclusion.'],
   ['products-services.spec.ts', 'Finance → Inventory → Inventory Management → Products & Services', 'Investigation required / Product master data', 'Untriaged',
     ['Open Products & Services.', 'Execute the named validation, tab navigation, search or owned service creation case.', 'Use only the unique PS-E2E fixture for creation; do not enter opening stock.', 'Compare visible values with the assertions and attached evidence.'],
     'Required fields should validate, form values should survive tab navigation, search should match, and a saved service should appear with the selected type.'],
