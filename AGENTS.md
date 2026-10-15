@@ -1,5 +1,11 @@
 # Luxora test workflow
 
+- User confirmation (2026-10-14): Apply across all modules: loading/navigation
+  timeouts and unavailable controls are execution/automation issues requiring
+  investigation, not confirmed functional bugs. Preserve actual test statuses
+  and evidence in Allure. Do not hide business assertion mismatches merely
+  because another step or screenshot timed out.
+
 - User confirmation (2026-10-12): Payment Voucher visibility after confirmed
   deletion is accepted system behavior, not a bug. Do not require deleted
   vouchers to disappear from the list or reference search. Preserve deletion

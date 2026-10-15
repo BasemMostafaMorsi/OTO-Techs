@@ -44,17 +44,21 @@ if (reportRun.error) console.error(reportRun.error);
 
 if (reportRun.status === 0) {
   require('./style-allure.cjs').styleReport();
-  const reportServer = spawn(executable, ['allure', 'open', 'allure-report'], {
-    cwd: process.cwd(),
-    env: process.env,
-    detached: true,
-    windowsHide: true,
-    stdio: 'ignore',
-    shell: useShell,
-  });
-  reportServer.unref();
+  if (!process.env.CI) {
+    const reportServer = spawn(executable, ['allure', 'open', 'allure-report'], {
+      cwd: process.cwd(),
+      env: process.env,
+      detached: true,
+      windowsHide: true,
+      stdio: 'ignore',
+      shell: useShell,
+    });
+    reportServer.unref();
+  } else {
+    console.log('CI: Allure generated; download the report artifact to view it locally.');
+  }
 } else {
   console.error('Allure report generation failed. See the output above.');
 }
 
-process.exitCode = testRun.status || reportRun.status || (testRun.error || reportRun.error ? 1 : 0);
+process.exitCode = testRun.status || reportRun.status || (testRun.error || reportRun.error || testRun.signal || reportRun.signal ? 1 : 0);

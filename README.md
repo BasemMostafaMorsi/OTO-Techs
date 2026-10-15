@@ -2,6 +2,10 @@
 
 Playwright end-to-end tests for the Luxora ERP web application.
 
+## GitHub Actions
+
+The [CI setup guide](docs/CI_CD.md) covers automatic offline checks, manual website suites, environment secrets and downloadable Allure reports. Workflow: `.github/workflows/luxora-tests.yml`. This test pipeline does not deploy the application.
+
 ## First run in PowerShell
 
 ```powershell

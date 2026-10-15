@@ -2,6 +2,15 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const cases = [
+  ['manufacturing.spec.ts', 'Finance → Inventory → Transfer → Manufacturing', 'Investigation required / Manufacturing', 'Untriaged',
+    ['Open Finance → Inventory → Transfer → Manufacturing.', 'Execute the named validation, source/output/Scrap line, search, balance or owned-draft scenario.', 'For the draft scenario, select gold from Riyadh and potat into Makkah, disable Scrap, enter quantity 1 and a unique MFG-E2E reference/batch/notes, then Save as Draft.', 'Review screenshots and request/response evidence at the failed step. Only test-owned drafts are deleted in cleanup.'],
+    'Required fields should validate; source, output and Scrap rows should operate independently. Balances should match the chosen warehouse. Draft values should persist and a notes-only edit should succeed without requiring product reselection. No actual manufacturing completion is tested.'],
+  ['internal-transfer-workflow.spec.ts', 'Finance → Inventory → Transfer → Internal Transfers', 'Investigation required / Draft, validation and filters', 'Untriaged',
+    ['Open Finance → Inventory → Transfer → Internal Transfers.', 'For quantity and draft cases select gold, source Riyadh and destination Jeddah; use the quantity and unique reference shown in the attachments.', 'Execute the named case: server validation, source balance changes, save/edit/reopen draft, or warehouse/status filters and Reset.', 'Compare the failed assertion with saved response evidence, stock/filter comparisons and screenshots. Only test-owned drafts are deleted in cleanup.'],
+    'Zero and negative quantities should be rejected. Drafts should preserve edited values without moving stock. Source balances should match the selected warehouse. Filters should return the matching baseline rows and Reset should restore them. Confirm the failed step before assigning an application defect.'],
+  ['internal-transfer.spec.ts', 'Finance → Inventory → Transfer → Internal Transfers', 'Investigation required / Internal transfer', 'Untriaged',
+    ['Open Internal Transfers.', 'Execute the named blank draft, default controls, line management, unsaved navigation or search case.', 'Review screenshots and the failed assertion.'],
+    'Source/destination warehouses, product and quantity should validate; line management and search should work; unsaved fields should be discarded. No stock transfer is validated by this suite.'],
   ['deliveries.spec.ts', 'Finance → Inventory → Transfer → Deliveries', 'Investigation required / Inventory deliveries', 'Untriaged',
     ['Open Finance → Inventory → Transfer → Deliveries.', 'Execute the named blank draft, defaults, line management, unsaved navigation or search case.', 'Compare the failed assertion with the attached browser screenshot.'],
     'Required fields should validate, line operations and search should behave as selected, and unsaved changes should be discarded. No delivery is validated or posted by this suite.'],
@@ -109,8 +118,16 @@ const cases = [
     'Preview should open a read-only details page; Edit should open the editable form.'],
 ];
 const flatten = (steps = []) => steps.flatMap(step => [step, ...flatten(step.steps)]);
+function executionIssue(result, steps) {
+  const messages = [result.statusDetails?.message, ...steps.filter(s=>['failed','broken'].includes(s.status)).map(s=>s.statusDetails?.message)].filter(Boolean);
+  // A failed business assertion can coexist with a screenshot timeout. Keep it visible.
+  const execution = message => /(?:page\.(?:goto|reload|screenshot|waitForResponse)|locator\.(?:click|fill|waitFor)|browserType\.launch).*Timeout|Target (?:page|closed)|browser has been closed|net::ERR_|ECONNRESET|ENOTFOUND|element\(s\) not found|waiting for.*(?:loading|spinner)/is.test(message);
+  const responseUnavailable = message => /response\.(?:json|body|text):.*(?:Network\.getResponseBody|Response body is not available|No resource with given identifier)/is.test(message);
+  return messages.length > 0 && messages.every(message => execution(message) || responseUnavailable(message));
+}
 function enrich(directory = 'allure-results') {
   let reports = 0;
+  const categoryResults = [];
   for (const file of fs.readdirSync(directory).filter(name => name.endsWith('-result.json'))) {
     const resultPath = path.join(directory,file);
     const result = JSON.parse(fs.readFileSync(resultPath,'utf8'));
@@ -183,6 +200,17 @@ function enrich(directory = 'allure-results') {
         : 'The application should:\n\n- ' + expected);
       markdown += '\n\n**Evidence:**\nReview the screenshots, exported files and failed steps attached to this test.\n';
     }
+    if (failed && executionIssue(result, steps)) {
+      markdown = `**Title:** [Execution issue — review required] ${result.name}\n\n**Module:** ${moduleName}\n**Type:** Execution / Loading / Automation — not a confirmed application bug\n**Severity:** Untriaged\n**Priority:** Untriaged\n\n**Steps to Reproduce:**\n\n1. Run the named test.\n2. Inspect the interrupted step, loading state and attached diagnostics.\n3. Retry after checking page readiness, selectors and environment availability.\n\n**Actual Result:**\n\n- The test could not complete an operation or locate the expected control. Loading, timing, selectors or environment availability require investigation.\n- This run does not establish a functional application defect.\n- ${String(result.statusDetails?.message || 'See failed steps.').replace(/\u001b\[[0-9;]*m/g,'').replace(/\s+/g,' ').slice(0,1800)}\n\n**Expected Result:**\n\n- Wait for the relevant page/data state and verify the scenario on a completed run.\n- Preserve the original failed/broken status; do not mark the test passed or suppress confirmed business assertion failures.\n\n**Evidence:**\n\n- Review original failed steps and available screenshot/network attachments.\n`;
+    }
+    const manufacturingUpdate = attachments.find(a => a.name === 'manufacturing-update');
+    if (failed && manufacturingUpdate) {
+      const evidence = JSON.parse(fs.readFileSync(path.join(directory, manufacturingUpdate.source), 'utf8'));
+      if (evidence.status === 422 && /product_name field is required/.test(evidence.body?.message || '') &&
+          [...(evidence.submitted?.from || []), ...(evidence.submitted?.to || [])].some(item => item.product_name == null)) {
+        markdown = `**Title:** [Manufacturing] Saving a notes-only draft edit fails because product names are submitted as null\n\n**Module:** Finance → Inventory → Transfer → Manufacturing\n**Type:** Functional / Draft editing\n**Severity:** High\n**Priority:** High\n\n**Steps to Reproduce:**\n\n1. Create a Manufacturing draft with source warehouse Riyadh and product gold, destination Makkah and product potat, quantity 1, and Scrap disabled.\n2. Save as Draft and reopen Edit.\n3. Confirm both product names are displayed.\n4. Change only Notes.\n5. Choose Save → Save as Draft.\n\n**Actual Result:**\n\n- Update returns HTTP 422 and does not save the changed notes.\n- The request contains null product_name values despite the product names being visible on the form.\n- Server message: ${evidence.body.message}\n- This evidence identifies the submitted data discrepancy; the application source was not available to establish its internal cause.\n\n**Expected Result:**\n\n- A notes-only edit should preserve existing product details and save successfully.\n- Valid saved product names should be included without requiring the user to reselect the products.\n\n**Evidence:**\n\n- See manufacturing-update JSON for submitted item names, response status and message.\n- See manufacturing-update-screen for the form before cleanup.\n`;
+      }
+    }
     const voucherEvidence = attachments.find(a => a.name === 'decimal-total');
     if (failed && voucherEvidence) {
       const e = JSON.parse(fs.readFileSync(path.join(directory,voucherEvidence.source),'utf8'));
@@ -214,8 +242,10 @@ function enrich(directory = 'allure-results') {
     }
     const source = `${result.uuid}-bug-report.md`;
     fs.writeFileSync(path.join(directory,source),markdown);
-    result.attachments = (result.attachments || []).filter(a=>a.name!=='Bug Report');
-    result.attachments.push({name:'Bug Report',source,type:'text/markdown'});
+    const executionOnly = markdown.includes('**Type:** Execution / Loading / Automation');
+    if (failed) categoryResults.push({ message: result.statusDetails?.message, trace: result.statusDetails?.trace, executionOnly });
+    result.attachments = (result.attachments || []).filter(a=>!['Bug Report','Execution Issue','Browser Diagnostics'].includes(a.name));
+    result.attachments.push({name:executionOnly?'Execution Issue':failed?'Bug Report':'Browser Diagnostics',source,type:'text/markdown'});
     // Preserve existing descriptions and make repeated generation idempotent.
     const marker = '<!-- luxora-generated-bug-report -->';
     const original = (result.description || '').split(marker)[0];
@@ -226,10 +256,32 @@ function enrich(directory = 'allure-results') {
     fs.writeFileSync(resultPath,JSON.stringify(result));
     reports++;
   }
+  // Match only current-run execution messages. Never relabel a business failure
+  // sharing the same message, and keep original statuses and statusDetails intact.
+  const categoryName = 'Execution / Loading / Automation — review required';
+  const categoriesPath = path.join(directory, 'categories.json');
+  const categories = fs.existsSync(categoriesPath) ? JSON.parse(fs.readFileSync(categoriesPath, 'utf8')) : [];
+  const retained = categories.filter(category => category.name !== categoryName);
+  const signature = r => JSON.stringify([r.message, r.trace]);
+  const businessMessages = new Set(categoryResults.filter(r => !r.executionOnly).map(signature));
+  const escape = value => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const seen = new Set();
+  for (const result of categoryResults) {
+    const key = signature(result);
+    if (!result.executionOnly || !result.message || businessMessages.has(key) || seen.has(key)) continue;
+    seen.add(key);
+    retained.unshift({
+      name: categoryName,
+      matchedStatuses: ['failed', 'broken'],
+      messageRegex: '^(?:' + escape(result.message) + ')$',
+      ...(result.trace ? { traceRegex: '^(?:' + escape(result.trace) + ')$' } : {}),
+    });
+  }
+  fs.writeFileSync(categoriesPath, JSON.stringify(retained, null, 2));
   console.log(`Allure: added current-run bug reports / diagnostics to ${reports} test results.`);
   return reports;
 }
-module.exports = { enrich };
+module.exports = { enrich, executionIssue };
 if (require.main === module) enrich(process.argv[2]);
 
 

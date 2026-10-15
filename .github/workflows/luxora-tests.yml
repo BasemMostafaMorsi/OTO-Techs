@@ -1,0 +1,109 @@
+name: Luxora tests
+
+on:
+  schedule:
+    - cron: '0 9 * * *'
+      timezone: Africa/Cairo
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: Website suite (full-business creates and modifies test data)
+        type: choice
+        default: login
+        options:
+          - login
+          - business-partners
+          - manufacturing
+          - internal-transfers
+          - full-business
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    name: Offline unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - run: npm ci
+      - run: npm run test:ci -- unit
+      - name: Upload unit reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-reports-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: warn
+          path: |
+            allure-report/
+            allure-results/
+            playwright-report/
+            test-results/
+
+  website:
+    name: Website tests
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    needs: unit
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    concurrency:
+      group: luxora-shared-test-data
+      cancel-in-progress: false
+    env:
+      BASE_URL: ${{ vars.BASE_URL }}
+      LUXORA_EMAIL: ${{ secrets.LUXORA_EMAIL }}
+      LUXORA_PASSWORD: ${{ secrets.LUXORA_PASSWORD }}
+      LUXORA_SALES_REP: ${{ vars.LUXORA_SALES_REP }}
+      SUITE: ${{ inputs.suite || 'full-business' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Check test account configuration
+        shell: bash
+        run: |
+          for key in BASE_URL LUXORA_EMAIL LUXORA_PASSWORD; do
+            if [ -z "${!key}" ]; then
+              echo "::error::Missing environment setting: $key"
+              exit 1
+            fi
+          done
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Run selected suite
+        run: npm run test:ci -- "$SUITE"
+      - name: Upload reports and evidence (including failures)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: website-${{ env.SUITE }}-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: warn
+          path: |
+            allure-report/
+            allure-results/
+            playwright-report/
+            test-results/
