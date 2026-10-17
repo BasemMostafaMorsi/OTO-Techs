@@ -1,3 +1,4 @@
+import {openList} from '../../../helpers/open-list';
 /// <reference types="node" />
 import { test, expect, Page } from '../../../helpers/test';
 import { login } from '../../../helpers/auth';
@@ -5,10 +6,7 @@ import { mkdir, stat } from 'node:fs/promises';
 const base = '/en/contacts/configuration/project-categories', api = '/sales/categories';
 const row = (page: Page, id: string) => page.getByRole('row').filter({ has: page.getByText('#' + id, { exact: true }) });
 const nameField = (page: Page) => page.getByRole('dialog').getByRole('textbox', { name: 'Category Name *', exact: true });
-async function open(page: Page) {
-    const p = page.waitForResponse(r => r.request().method() === 'GET' && r.url().includes(api + '?')); await page.goto(base); const response = await p; expect(response.ok()).toBeTruthy(); const data = (await response.json()).data;
-    await expect(page.getByRole('button', { name: new RegExp(`^\\d+/${data.meta.total}$`) })).toBeVisible(); return data;
-}
+async function open(page: Page) { return openList(page, base, api); }
 async function search(page: Page, value: string) {
     const p = page.waitForResponse(r => r.request().method() === 'GET' && r.url().includes(api + '?') && r.url().includes(encodeURIComponent(value))); await page.getByPlaceholder('Search', { exact: true }).fill(value); expect((await p).ok()).toBeTruthy();
 }

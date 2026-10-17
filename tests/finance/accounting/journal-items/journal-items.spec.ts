@@ -50,12 +50,17 @@ test('@journal-items complete pagination and displayed fields match loaded API r
  page.on('response',response=>{if(response.url().includes(endpoint)&&response.ok())pending.push(response.json().then(body=>{pages.set(body.data.meta.current_page,body.data.collection);}));});
  const initial=await open(page);const visible=await complete(page);await Promise.all(pending);
  const source=[...pages.entries()].sort((a,b)=>a[0]-b[0]).flatMap(([,items])=>items);
- expect(source).toHaveLength(initial.meta.total);
+ await test.step('All loaded UI and API rows match the reported total', async()=>{expect(source).toHaveLength(initial.meta.total);expect(visible).toHaveLength(initial.meta.total);});
  const amount=(value:string)=>minorUnits(value,{precision:2}).toString();
+ // The table displays two decimals; API rows can contain additional precision.
+ // Round exact decimal integers, without floating-point conversion or relaxing UI precision.
+ const sourceAmount=(value:string)=>{const scaled=minorUnits(value,{precision:8});const sign=scaled<0n?-1n:1n;return (sign*((scaled*sign+500000n)/1000000n)).toString();};
  const actual=visible.map(r=>({date:r.DATE,journal:r['JL ID'],status:r.STATUS,account:r.ACCOUNT.toLowerCase(),ref:r.REF,debit:amount(r.DEBIT),credit:amount(r.CREDIT)}));
- const expected=source.map(r=>({date:r.journalEntry.date,journal:String(r.journalEntry.identity_number??''),status:statuses[String(r.journalEntry.status)],account:clean(`${r.account.account_number}. ${r.account.name}`).toLowerCase(),ref:String(r.journalEntry.ref??''),debit:amount(String(r.debit)),credit:amount(String(r.credit))}));
- await info.attach('all-page-reconciliation',{body:JSON.stringify({total:initial.meta.total,pages:[...pages.keys()],actual,expected},null,2),contentType:'application/json'});
- expect(actual.map(row=>JSON.stringify(row)).sort()).toEqual(expected.map(row=>JSON.stringify(row)).sort());
+ const expected=source.map(r=>({date:r.journalEntry.date,journal:String(r.journalEntry.identity_number??''),status:statuses[String(r.journalEntry.status)],account:clean(`${r.account.account_number}. ${r.account.name}`).toLowerCase(),ref:String(r.journalEntry.ref??''),debit:sourceAmount(String(r.debit)),credit:sourceAmount(String(r.credit))}));
+ await info.attach('all-page-reconciliation',{body:JSON.stringify({total:initial.meta.total,pages:[...pages.keys()],sourceAmounts:source.map(r=>({id:r.id,debit:r.debit,credit:r.credit})),actual,expected},null,2),contentType:'application/json'});
+ const withoutName=(row:typeof actual[number])=>({...row,account:row.account.split('.')[0].trim()});
+ await test.step('Dates, journal IDs, account numbers, references and displayed amounts match',async()=>{expect(actual.map(row=>JSON.stringify(withoutName(row))).sort()).toEqual(expected.map(row=>JSON.stringify(withoutName(row))).sort());});
+ await test.step('Account names match source data',async()=>{expect(actual.map(row=>JSON.stringify(row)).sort(),'Account names displayed in Journal Items must match source data').toEqual(expected.map(row=>JSON.stringify(row)).sort());});
 });
 
 test('@journal-items reference search, empty result and clearing search',async({page},info)=>{
@@ -130,3 +135,4 @@ test('@journal-items list export downloads a nonempty file',async({page},info)=>
  expect((await stat(file)).size).toBeGreaterThan(0);
  await info.attach('journal-items-export',{path:file,contentType:'application/octet-stream'});
 });
+

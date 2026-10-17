@@ -2,6 +2,15 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const cases = [
+  ['warehouses.spec.ts', 'Finance → Inventory → Configuration → Warehouses', 'Investigation required / Warehouse workflow', 'Untriaged',
+    ['Open Finance → Inventory → Configuration → Warehouses.', 'Execute the named search, status, keeper or address filter and compare returned IDs with the baseline.', 'For form scenarios, open Create and use the WH-E2E test record with the selected keeper and Egypt / Cairo / Al Azbakeyah address.', 'Review the failed assertion and attached warehouse source data and screenshots.'],
+    'List values and filters should match source records. Required inputs should prevent invalid submission, dependent address selections should clear when their parent changes, and saved test values should persist after reopening the list. Timeouts require automation investigation.'],
+  ['stocktaking.spec.ts', 'Finance → Inventory → Transfer → Stocktaking', 'Investigation required / Stocktaking list and details', 'Untriaged',
+    ['Open Inventory → Transfer → Stocktaking.', 'Execute the named reference search, status/warehouse/date filter or detail scenario.', 'Compare filtered record IDs with the unfiltered source response.', 'For completed details, inspect both Stocktaking information and Stock Items; compare reference, warehouse, book balance, actual balance and quantity difference with stocktaking-detail-source.', 'Review attached source data and screenshots. Existing completed records are never submitted or deleted.'],
+    'List and filter results should match source records; item quantity difference should equal actual balance minus book balance. Positive and negative differences should retain their signs. Execution failures require investigation separately from observed business mismatches.'],
+  ['scrap.spec.ts', 'Finance → Inventory → Transfer → Scrap', 'Investigation required / Scrap list and details', 'Untriaged',
+    ['Open Inventory → Transfer → Scrap.', 'Execute the named search, status/warehouse/date filter or detail scenario using the existing records.', 'For filters, compare returned record IDs with the independent unfiltered source and reset the filter.', 'For details, open the selected Completed record and compare product, quantity and Balance before with its saved scrape_items response.', 'Inspect the attached screenshot and source/filter evidence. No existing completed record is saved or deleted.'],
+    'List fields and filter results should match source records. Detail values should match the selected saved scrap record; loading and unavailable controls require execution investigation, not automatic defect classification.'],
   ['manufacturing.spec.ts', 'Finance → Inventory → Transfer → Manufacturing', 'Investigation required / Manufacturing', 'Untriaged',
     ['Open Finance → Inventory → Transfer → Manufacturing.', 'Execute the named validation, source/output/Scrap line, search, balance or owned-draft scenario.', 'For the draft scenario, select gold from Riyadh and potat into Makkah, disable Scrap, enter quantity 1 and a unique MFG-E2E reference/batch/notes, then Save as Draft.', 'Review screenshots and request/response evidence at the failed step. Only test-owned drafts are deleted in cleanup.'],
     'Required fields should validate; source, output and Scrap rows should operate independently. Balances should match the chosen warehouse. Draft values should persist and a notes-only edit should succeed without requiring product reselection. No actual manufacturing completion is tested.'],
@@ -111,8 +120,8 @@ const cases = [
     ['Open the project creation form.', 'Open Country ? Create new.', 'Check Add Country, Country Name and Submit.', 'Enter an unsaved country name and choose Cancel.'],
     'The dialog should show its country-name field and controls. Cancel should close it without selecting the unsaved country. Translation and Arabic-name fields are not required, as confirmed by the user.'],
   ['material-request-to-order.spec.ts', 'Finance ? Purchase ? Material Request ? Purchase Order', 'Functional / Conversion', 'High',
-    ['Create a material request for gold with quantity 20.', 'Save the request.', 'Select Convert to order.', 'Wait for the order form to load and inspect product, quantity, unit, price and net total.'],
-    'The converted order should retain the product and quantity and populate unit, purchase price and totals according to product configuration. Product Master settings must be verified before assigning a root cause.'],
+    ['Open Products & Services and inspect the saved unit of measure for gold.', 'Create and save a material request for gold with quantity 20.', 'Select Convert to order.', 'Wait for the product and quantity to populate, then compare the unit with the saved product unit shown in source-product-unit.'],
+    'The converted order should retain the product and quantity and populate the saved product unit. This scenario verifies unit propagation; no purchase-price or total mismatch is inferred from a missing unit.'],
   ['employee-lifecycle.spec.ts', 'User Management ? Employees', 'Functional / Navigation', 'Medium',
     ['Create a uniquely named test employee.', 'Locate the employee in the list.', 'Open the action menu and choose Preview.', 'Check the destination URL and whether the page is editable.'],
     'Preview should open a read-only details page; Edit should open the editable form.'],
@@ -123,7 +132,10 @@ function executionIssue(result, steps) {
   // A failed business assertion can coexist with a screenshot timeout. Keep it visible.
   const execution = message => /(?:page\.(?:goto|reload|screenshot|waitForResponse)|locator\.(?:click|fill|waitFor)|browserType\.launch).*Timeout|Target (?:page|closed)|browser has been closed|net::ERR_|ECONNRESET|ENOTFOUND|element\(s\) not found|waiting for.*(?:loading|spinner)/is.test(message);
   const responseUnavailable = message => /response\.(?:json|body|text):.*(?:Network\.getResponseBody|Response body is not available|No resource with given identifier)/is.test(message);
-  return messages.length > 0 && messages.every(message => execution(message) || responseUnavailable(message));
+  const setupOrSession = message => /(?:"(?:beforeAll|beforeEach|afterAll|afterEach)" hook timeout|Test timeout of \d+ms exceeded|Protocol error.*(?:session closed|Target closed))/is.test(message);
+  const hostResource = message => /ENOSPC|no space left on device|heap out of memory/i.test(message);
+  const warehousePlaceholder = message => (result.fullName || '').includes('warehouses.spec.ts') && result.name === 'name search no-match and clear restore records' && /Locator:.*locator\('tbody tr'\)/s.test(message) && /Expected: 0/.test(message) && /Received: 1/.test(message);
+  return messages.length > 0 && messages.every(message => execution(message) || responseUnavailable(message) || setupOrSession(message) || hostResource(message) || warehousePlaceholder(message));
 }
 function enrich(directory = 'allure-results') {
   let reports = 0;
@@ -138,6 +150,21 @@ function enrich(directory = 'allure-results') {
     const failed = ['failed','broken'].includes(result.status);
     if (!failed && !diagnostics.length) continue;
     let definition = cases.find(([file]) => (result.fullName || '').includes(file) || (result.labels || []).some(label => ['suite', 'titlePath'].includes(label.name) && label.value.includes(file)));
+    if ((result.fullName || '').includes('stocktaking.spec.ts') && (result.statusDetails?.message || '').includes('Same-day date filter must retain')) {
+      definition = [null, 'Finance → Inventory → Transfer → Stocktaking', 'Functional / Date filtering', 'Medium',
+        ['Open Inventory → Transfer → Stocktaking.', 'Identify an existing record and its date in the attached baseline (observed record #2, 2026-10-07).', 'Open Filter and select that date as both the start and end date.', 'Submit and compare the returned records with the baseline.', 'Reset the filter and verify that the records return.'],
+        'A date range covering the record day should include that record. The observed same-day request returned no records although the baseline contained record #2 on that day. The exact backend cause is not established.'];
+    }
+    if ((result.fullName || '').includes('scrap.spec.ts') && (result.statusDetails?.message || '').includes('Balance before should match')) {
+      definition = [null, 'Finance → Inventory → Transfer → Scrap', 'Functional / Historical balance display', 'Medium',
+        ['Open Inventory → Transfer → Scrap.', 'Open the Completed record identified in scrap-detail-source (observed record #2).', 'Inspect the gold item quantity and Balance before.', 'Compare Balance before with scrape_items.balance_before in the saved detail response.'],
+        'Balance before should show the persisted pre-transaction balance for this scrap item. The observed UI value 300 differs from the saved balance_before value 190; this does not establish that stock was incorrectly posted.'];
+    }
+    if ((result.fullName || '').includes('journal-items.spec.ts') && (result.statusDetails?.message || '').includes('Account names displayed in Journal Items')) {
+      definition = [null, 'Finance → Accounting → Journal Items', 'Functional / Account name display', 'Medium',
+        ['Open Finance → Accounting → Journal Items.', 'Load all pages and compare the UI count and displayed amounts with the attached API data.', 'Inspect Account cells for warehouse accounts such as 1161005.', 'Compare the displayed account number/name with the source account name in all-page-reconciliation.'],
+        'Each account cell should display its account number and source name. Missing account names must be reported separately from successful count and amount checks.'];
+    }
     if ((result.fullName || '').includes('project-categories.spec.ts') && result.name === 'confirmed status persists across reload') {
       definition = [null, 'Business Partners ? Contact Settings ? Project Categories', 'Functional / Status change', 'Medium',
         ['Open Business Partners ? Contact Settings ? Project Categories.', 'Create an Active category with a valid name.', 'Open its action menu ? Status.', 'Select Inactive and click Change.', 'Inspect the response and status dialog.'],

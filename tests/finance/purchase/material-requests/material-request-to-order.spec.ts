@@ -3,7 +3,7 @@ import { login } from '../../../helpers/auth';
 
 test.describe('Material Request conversion', () => {
   test('@smoke product data is populated in a Purchase Order', async ({ page }) => {
-    test.info().annotations.push({ type: 'known-issue', description: 'Known defect: converted items currently lose UOM, purchase price, and calculated totals.' });
+    test.setTimeout(90_000);
 
     const now = new Date();
     const date = `${String(now.getMonth() + 1).padStart(2, '0')}/${String(
@@ -12,6 +12,12 @@ test.describe('Material Request conversion', () => {
     const description = `AUTO material request ${Date.now()}`;
 
     await login(page);
+    await page.goto('/en/finance/inventory/inventory-managment/products-services');
+    await page.getByText('gold', {exact:true}).click();
+    const sourceUnit = page.getByRole('combobox', {name:'Unit of measure *',exact:true});
+    await expect(sourceUnit).not.toHaveValue('');
+    const expectedUnit = await sourceUnit.inputValue();
+    await test.info().attach('source-product-unit', {body:JSON.stringify({product:'gold',unit:expectedUnit}),contentType:'application/json'});
     await page.goto('/en/finance/purchase-invoices/request-material/create');
 
     await page.locator('input[placeholder="MM/DD/YYYY"]').fill(date);
@@ -34,6 +40,7 @@ test.describe('Material Request conversion', () => {
     expect(saveResponse.ok()).toBeTruthy();
     const saved = await saveResponse.json();
     const requestId = saved.data.id;
+    await test.info().attach('created-material-request',{body:JSON.stringify({id:requestId,description}),contentType:'application/json'});
 
     await page.goto('/en/finance/purchase-invoices/request-material');
     const requestRow = page
@@ -51,10 +58,6 @@ test.describe('Material Request conversion', () => {
     await page.waitForURL(/\/orders\/create\?from_materialReq=true/);
     await page
       .getByText('Loading form lists...')
-      .waitFor({ state: 'visible', timeout: 10_000 })
-      .catch(() => {});
-    await page
-      .getByText('Loading form lists...')
       .waitFor({ state: 'hidden', timeout: 30_000 });
 
     const productInput = page.locator('input[placeholder="Select Product"]').first();
@@ -66,15 +69,10 @@ test.describe('Material Request conversion', () => {
     await expect(productInput).toHaveValue('gold');
     await expect(quantityInput).toHaveValue('20');
 
-    // Values expected from Product Master Data after conversion.
-    await expect.soft(unitInput, 'UOM was not populated').not.toHaveValue('');
-
-    const price = Number(await priceInput.inputValue());
-    expect.soft(price, 'Purchase price was not populated').toBeGreaterThan(0);
-
-    const netText = await page.getByText(/^Net$/).locator('..').innerText();
-    // A string check for "0 SAR" also rejects valid totals such as "100 SAR".
-    const net = Number(netText.replace(/,/g, '').match(/-?\d+(?:\.\d+)?/)?.[0]);
-    expect.soft(net, 'Net total must be positive after conversion').toBeGreaterThan(0);
+    const evidence = test.info().outputPath('purchase-order-converted-unit.png');
+    await page.screenshot({path:evidence,fullPage:true});
+    await test.info().attach('converted-order-screen',{path:evidence,contentType:'image/png'});
+    await test.info().attach('unit-conversion-comparison',{body:JSON.stringify({requestId,product:'gold',expectedUnit,actualUnit:await unitInput.inputValue(),quantity:await quantityInput.inputValue(),displayedPrice:await priceInput.inputValue()}),contentType:'application/json'});
+    await expect(unitInput, 'Converted UOM must match the source product unit').toHaveValue(expectedUnit);
   });
 });

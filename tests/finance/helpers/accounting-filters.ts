@@ -12,7 +12,8 @@ export function accountingFilters(account:boolean){
  const parentName=account?'Cash':'CC-E2E-INSPECT-20261008',parentOption=account?'Cash 1111':'CC-E2E-INSPECT-20261008 987654',parentField=account?'Main account':'Main cost center';
  const name=(r:Row)=>r.name??r.cost_center_name;
  let baseline:Row[]=[];let seeds:{id:string;name:string}[]=[];
- const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Cairo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+ // Use the persisted fixture date; the server calendar can differ from Cairo near midnight.
+ let filterDate = '';
  const list=(p:Page,predicate:(u:URL)=>boolean=()=>true)=>{const started=Date.now();return p.waitForResponse(r=>r.request().method()==='GET'&&r.request().timing().startTime>=started&&new URL(r.url()).pathname===api&&predicate(new URL(r.url()))).then(async r=>{expect(r.ok()).toBeTruthy();return {url:r.url(),data:(await r.json()).data};});};
  async function open(p:Page){const pending=list(p,u=>u.searchParams.get('page')==='1'&&!u.searchParams.get('search'));await p.goto(base);const initial=await pending;await expect(p.getByRole('button',{name:new RegExp('^\\d+/'+initial.data.meta.total+'$')})).toBeVisible();}
  async function select(p:Page,field:string,value:string){await p.getByRole('combobox',{name:field,exact:true}).click();await p.getByRole('option',{name:value,exact:true}).click();}
@@ -54,7 +55,7 @@ export function accountingFilters(account:boolean){
   if(!active){const row=await find(p,n);await row.locator('input.MuiSwitch-input').click();await expect(row.locator('input.MuiSwitch-input')).not.toBeChecked();}
  }
  test.beforeAll(async({browser,baseURL})=>{
-  test.setTimeout(240000);await mkdir(folder,{recursive:true});const p=await browser.newPage({baseURL});try{await login(p);await seed(p,true);await seed(p,false);baseline=await unfiltered(p);await writeFile(folder+'/baseline.json',JSON.stringify(baseline.map(r=>({id:r.id,name:name(r),number:r.account_number,balance:r.balance??r.value,status:r.status,created_at:r.created_at,parent:r.parent?.name??r.parent?.cost_center_name,tags:r.tags})),null,2));}finally{await p.close();}
+  test.setTimeout(240000);await mkdir(folder,{recursive:true});const p=await browser.newPage({baseURL});try{await login(p);await seed(p,true);await seed(p,false);baseline=await unfiltered(p);const fixture=baseline.find(r=>String(r.id)===seeds[0]?.id);expect(fixture,'Created filter fixture must be in baseline').toBeTruthy();filterDate=String(fixture.created_at).slice(0,10);expect(filterDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);await writeFile(folder+'/baseline.json',JSON.stringify(baseline.map(r=>({id:r.id,name:name(r),number:r.account_number,balance:r.balance??r.value,status:r.status,created_at:r.created_at,parent:r.parent?.name??r.parent?.cost_center_name,tags:r.tags})),null,2));}finally{await p.close();}
  });
  test.afterAll(async({browser,baseURL})=>{
   test.setTimeout(180000);if(!seeds.length)return;const p=await browser.newPage({baseURL});const deleted:string[]=[];
@@ -84,12 +85,12 @@ export function accountingFilters(account:boolean){
    if(choice.field==='Hide zero values')await page.getByRole('checkbox',{name:'Hide zero values',exact:true}).check();
    else if(choice.field==='Creation date'){
     await page.getByRole('textbox',{name:'Creation date',exact:true}).click();
-    const date=new Date(today+'T12:00:00Z'),month=date.toLocaleDateString('en-US',{month:'long',timeZone:'UTC'}),day=date.getUTCDate(),year=date.getUTCFullYear();
+    const date=new Date(filterDate+'T12:00:00Z'),month=date.toLocaleDateString('en-US',{month:'long',timeZone:'UTC'}),day=date.getUTCDate(),year=date.getUTCFullYear();
     const option=page.getByRole('option',{name:new RegExp('^Choose .*'+month+' '+day+'(?:st|nd|rd|th), '+year+'$')});await option.click();await option.click();
    }else await select(page,choice.field,choice.value!);
   }
-  captured.set(page,[]);const pending=list(page);await page.getByRole('button',{name:'Submit',exact:true}).click();const first=await pending;const actual=await loadAll(page,first),expected=baseline.filter(r=>scenario.matches(r,today));
-  await info.attach('filter-comparison',{body:JSON.stringify({scenario:scenario.name,choices:scenario.choices,url:first.url,baselineCount:baseline.length,expectedIds:expected.map(r=>r.id),expected:expected.map(r=>({id:r.id,name:name(r),balance:r.balance??r.value})),actual:actual.map(r=>({id:r.id,name:name(r),status:r.status,parent:r.parent?.name??r.parent?.cost_center_name,tags:r.tags,creator:creator(r),date:r.created_at,balance:r.balance??r.value,currency:r.currency?.name,type:r.account_type_id,level:r.level,guidance:r.financial_statement_guidance?.name,cashflow:r.cashflow?.name}))},null,2),contentType:'application/json'});
+  captured.set(page,[]);const pending=list(page);await page.getByRole('button',{name:'Submit',exact:true}).click();const first=await pending;const actual=await loadAll(page,first),expected=baseline.filter(r=>scenario.matches(r,filterDate));
+  await info.attach('filter-comparison',{body:JSON.stringify({scenario:scenario.name,choices:scenario.choices,filterDate,url:first.url,baselineCount:baseline.length,expectedIds:expected.map(r=>r.id),expected:expected.map(r=>({id:r.id,name:name(r),balance:r.balance??r.value})),actual:actual.map(r=>({id:r.id,name:name(r),status:r.status,parent:r.parent?.name??r.parent?.cost_center_name,tags:r.tags,creator:creator(r),date:r.created_at,balance:r.balance??r.value,currency:r.currency?.name,type:r.account_type_id,level:r.level,guidance:r.financial_statement_guidance?.name,cashflow:r.cashflow?.name}))},null,2),contentType:'application/json'});
   if(!scenario.empty)expect(expected.length,'Positive filter coverage requires matching baseline records').toBeGreaterThan(0);
   expect(actual.map(r=>r.id).sort(),'Filtered records must exactly match the independent unfiltered baseline predicate').toEqual(expected.map(r=>r.id).sort());
   await page.getByRole('button',{name:'Filter',exact:true}).click();const reset=list(page);await page.getByRole('button',{name:'Reset',exact:true}).click();const restored=await reset;

@@ -1,3 +1,4 @@
+import {openList} from '../../../helpers/open-list';
 ﻿/// <reference types="node" />
 import {test,expect,Page} from '../../../helpers/test';
 import {login} from '../../../helpers/auth';
@@ -6,10 +7,7 @@ import type {Download} from '@playwright/test';
 const base='/en/contacts/configuration/classifications',api='/sales/classifications';
 const row=(page:Page,id:string)=>page.getByRole('row').filter({has:page.getByText('#'+id,{exact:true})});
 const nameField=(page:Page)=>page.getByRole('dialog').getByRole('textbox',{name:'Classification Name *',exact:true});
-async function open(page:Page){
- const p=page.waitForResponse(r=>{const url=new URL(r.url());return r.request().method()==='GET'&&url.pathname.endsWith(api)&&!url.searchParams.get('search')&&!url.searchParams.get('status')&&url.searchParams.get('page')==='1';}).then(async response=>{expect(response.ok()).toBeTruthy();return (await response.json()).data;});await page.goto(base);const data=await p;
- await expect(page.getByRole('button',{name:new RegExp(`^\\d+/${data.meta.total}$`)})).toBeVisible();return data;
-}
+async function open(page: Page) { return openList(page, base, api); }
 async function search(page:Page,value:string){
  const p=page.waitForResponse(r=>r.request().method()==='GET'&&r.url().includes(api+'?')&&r.url().includes(encodeURIComponent(value)));await page.getByPlaceholder('Search',{exact:true}).fill(value);expect((await p).ok()).toBeTruthy();
 }

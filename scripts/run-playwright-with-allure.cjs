@@ -5,7 +5,7 @@ const { enrich } = require('./enrich-allure-bugs.cjs');
 
 const executable = 'npx';
 const useShell = process.platform === 'win32';
-const playwrightArgs = ['playwright', 'test', ...process.argv.slice(2)];
+const playwrightArgs = [require.resolve('@playwright/test/cli'), 'test', ...process.argv.slice(2)];
 
 // Keep previous evidence, but never merge old failures into the current run.
 if (fs.existsSync('allure-results')) {
@@ -14,11 +14,11 @@ if (fs.existsSync('allure-results')) {
   fs.renameSync('allure-results',path.join(archive,'allure-results'));
 }
 
-const testRun = spawnSync(executable, playwrightArgs, {
+const testRun = spawnSync(process.execPath, playwrightArgs, {
   cwd: process.cwd(),
   env: process.env,
   stdio: 'inherit',
-  shell: useShell,
+  shell: false,
 });
 
 if (testRun.error) console.error(testRun.error);

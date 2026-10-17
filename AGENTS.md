@@ -1,5 +1,10 @@
 # Luxora test workflow
 
+- User confirmation (2026-10-17): Use `Power-vision/automation_test` (remote
+  `company`) as the authoritative GitHub repository and daily CI target.
+  Personal `BasemMostafaMorsi/OTO-Techs` test workflows are disabled; do not
+  reactivate or copy test credentials there without an explicit user request.
+
 - User confirmation (2026-10-14): Apply across all modules: loading/navigation
   timeouts and unavailable controls are execution/automation issues requiring
   investigation, not confirmed functional bugs. Preserve actual test statuses
