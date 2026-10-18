@@ -2,6 +2,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const cases = [
+  ['units-of-measure.spec.ts', 'Finance → Inventory → Configuration → Units of Measure', 'Investigation required / Units of Measure workflow', 'Untriaged',
+    ['Open Finance → Inventory → Configuration → Units of Measure.', 'Execute the named list, search, selection, status filter or required-field scenario.', 'For lifecycle coverage choose Unit type, create a unique UOM-E2E name and code, discard an unsaved edit, then save edits and verify status after reload.', 'Cancel deletion before confirming deletion of the test-owned unit. Review attached source responses, screenshots and the failed step.'],
+    'Displayed names, codes and status should match source records. Search and filters should return matching records. Required fields should reject incomplete forms. Saved test values should persist after reload; discarded changes should not persist. Timeouts and unavailable controls require automation investigation.'],
   ['warehouses.spec.ts', 'Finance → Inventory → Configuration → Warehouses', 'Investigation required / Warehouse workflow', 'Untriaged',
     ['Open Finance → Inventory → Configuration → Warehouses.', 'Execute the named search, status, keeper or address filter and compare returned IDs with the baseline.', 'For form scenarios, open Create and use the WH-E2E test record with the selected keeper and Egypt / Cairo / Al Azbakeyah address.', 'Review the failed assertion and attached warehouse source data and screenshots.'],
     'List values and filters should match source records. Required inputs should prevent invalid submission, dependent address selections should clear when their parent changes, and saved test values should persist after reopening the list. Timeouts require automation investigation.'],
@@ -150,6 +153,24 @@ function enrich(directory = 'allure-results') {
     const failed = ['failed','broken'].includes(result.status);
     if (!failed && !diagnostics.length) continue;
     let definition = cases.find(([file]) => (result.fullName || '').includes(file) || (result.labels || []).some(label => ['suite', 'titlePath'].includes(label.name) && label.value.includes(file)));
+    if ((result.fullName || '').replace(/\\/g, '/').includes('inventory/configuration/additional-items/')) {
+      definition = [null, 'Finance → Inventory → Configuration → Additional Items', 'Investigation required / Inventory additional items', 'Untriaged',
+        ['Open Finance → Inventory → Configuration → Inventory Additional Items.', 'Execute the named list, search, required-field, tag filter or unsaved navigation scenario.', 'For lifecycle coverage create an INV-AI-E2E item mapped to Receipts, edit its description/name and add Deliveries, then verify after reload.', 'Cancel deletion, verify the test-owned record remains, and confirm deletion. Review attached API responses and screenshots.'],
+        'Names and counts should match source records. Name and Tags should reject incomplete forms. Tag filters should return matching records and Reset should restore the baseline. Saved fields should persist and canceled actions should preserve records. Timeouts require execution investigation.'];
+      const mappingAttachment = attachments.find(a => a.name === 'inventory-pages-display');
+      if (mappingAttachment) {
+        const mapping = JSON.parse(fs.readFileSync(path.join(directory, mappingAttachment.source), 'utf8'));
+        if (!mapping.actual.includes(mapping.expected)) definition = [null, 'Finance → Inventory → Configuration → Additional Items', 'Functional / Pages display', 'Medium',
+          ['Open Inventory Additional Items and create a unique INV-AI-E2E record with Name, Description and Tags: Receipts.', 'Reload and search for the created name.', 'Compare its Pages cell with the selected Receipts mapping and attached create response.', 'Apply Tags: Receipts and check whether the created record is returned.', 'Inspect inventory-pages-display, saved-pages-screen and owned-receipts-filter attachments. Later lifecycle assertions remain visible if they also fail.'],
+          'The saved Receipts mapping should appear in the Pages column after reload. In the observed run the column is empty, while editing preserves the selected mapping and the Receipts filter returns the created record. Different module identifiers in create/filter requests alone do not establish a filtering defect.'];
+      }
+    }
+    if ((result.fullName || '').includes('units-of-measure.spec.ts') && attachments.some(a => a.name === 'edit-unit-type')) {
+      const evidence = JSON.parse(fs.readFileSync(path.join(directory, attachments.find(a => a.name === 'edit-unit-type').source), 'utf8'));
+      if (evidence.expected !== evidence.actual) definition = [null, 'Finance → Inventory → Configuration → Units of Measure', 'Functional / Edit form data consistency', 'Medium',
+        ['Open Units of Measure and create a unique UOM-E2E unit with type Primary, name and code.', 'Reload the list and verify that the unit is displayed as Primary.', 'Open the test unit action menu and choose Edit.', 'Inspect Unit type before changing any fields; compare edit-unit-type JSON and edit-unit-type-screen with the saved list.'],
+        'Opening Edit for a saved Primary unit should display Primary. The observed form displays Secondary. The test records this mismatch, then explicitly selects Primary to continue verifying save, status changes and deletion without suppressing the original failure.'];
+    }
     if ((result.fullName || '').includes('stocktaking.spec.ts') && (result.statusDetails?.message || '').includes('Same-day date filter must retain')) {
       definition = [null, 'Finance → Inventory → Transfer → Stocktaking', 'Functional / Date filtering', 'Medium',
         ['Open Inventory → Transfer → Stocktaking.', 'Identify an existing record and its date in the attached baseline (observed record #2, 2026-10-07).', 'Open Filter and select that date as both the start and end date.', 'Submit and compare the returned records with the baseline.', 'Reset the filter and verify that the records return.'],
