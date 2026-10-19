@@ -1,5 +1,11 @@
 # Luxora test workflow
 
+- User confirmation (2026-10-19): Direct manager was intentionally removed from
+  the Contacts filter. Do not require it or report its absence as a bug.
+
+- User confirmation (2026-10-19): Section was intentionally removed from the
+  Contacts filter by the developer. Do not require it or report its absence as a bug.
+
 - User confirmation (2026-10-17): Use `Power-vision/automation_test` (remote
   `company`) as the authoritative GitHub repository and daily CI target.
   Personal `BasemMostafaMorsi/OTO-Techs` test workflows are disabled; do not

@@ -49,14 +49,21 @@ export default defineConfig({
     ["list"],
     ["html", { outputFolder: "playwright-report", open: "never" }],
     ["allure-playwright", { outputFolder: "allure-results" }],
+    ["./scripts/cleanup-reporter.cjs"],
   ],
 
   use: {
     baseURL: process.env.BASE_URL ?? "https://luxora.poweritech.com",
-    headless: isCI,
+    // Temporary opt-in for a test environment with an untrusted certificate.
+    ignoreHTTPSErrors: process.env.LUXORA_IGNORE_HTTPS_ERRORS === "1",
+    headless: true,
     screenshot: "on",
     video: isCI || lightweightArtifacts ? "off" : "retain-on-failure",
-    trace: isCI ? "retain-on-failure" : lightweightArtifacts ? "on" : "retain-on-failure",
+    trace: isCI
+      ? "retain-on-failure"
+      : lightweightArtifacts
+        ? "on"
+        : "retain-on-failure",
     actionTimeout: 15_000,
     navigationTimeout: 30_000,
   },

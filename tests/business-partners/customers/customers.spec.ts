@@ -56,7 +56,11 @@ for(const type of ['Individual','Governmental','Commercial']){
    await page.goto(base);await search(page,name);const row=page.getByRole('row').filter({hasText:name});await expect(row).toContainText(type);
    await row.locator('button').first().click();await expect(page).toHaveURL(new RegExp(`/customers/${id}(?:\\?|$)`));await expect(page.getByRole('main')).toContainText(name);await expect(page.getByRole('main')).toContainText(email);
    await edit(page,id);await expect(page.getByRole('textbox',{name:'Name *',exact:true})).toHaveValue(name);await expect(page.getByRole('radio',{name:type,exact:true})).toBeChecked();
+   // Allow delayed form initialization to settle before editing (user-requested recheck).
+   await page.waitForTimeout(2000);
    await page.getByRole('textbox',{name:'Name *',exact:true}).fill(name+'-EDITED');
+   await page.getByRole('textbox',{name:'Name *',exact:true}).press('Tab');
+   await expect(page.getByRole('textbox',{name:'Name *',exact:true})).toHaveValue(name+'-EDITED');
    const saved=page.waitForResponse(r=>r.request().method()==='PUT'&&r.url().endsWith('/sales/customers/'+id));
    await page.getByRole('button',{name:/save|update/i}).click();const response=await saved;expect(response.ok()).toBeTruthy();
    await info.attach('update-evidence',{body:JSON.stringify({submitted:response.request().postDataJSON(),received:await response.json()}),contentType:'application/json'});

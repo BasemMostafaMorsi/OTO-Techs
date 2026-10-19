@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "clean:test-results": "node scripts/clean-test-results.cjs",
     "test:ci": "node scripts/test-ci.cjs",
     "test": "node scripts/run-playwright-with-allure.cjs",
     "test:smoke": "node scripts/run-playwright-with-allure.cjs --grep @smoke",

@@ -112,6 +112,8 @@ test.describe('Business Partners - Contact lifecycle', () => {
       await page.getByRole('menuitem', { name: 'Edit' }).click();
 
       await expect(page.getByRole('textbox', { name: 'Name *' })).toHaveValue(originalName);
+      // Allow delayed form initialization to settle before editing (user-requested recheck).
+      await page.waitForTimeout(2000);
       await page.getByRole('textbox', { name: 'Name *' }).fill(updatedName);
       await page.getByRole('textbox', { name: 'Name *' }).press('Tab');
       await expect(page.getByRole('textbox', { name: 'Name *' })).toHaveValue(updatedName);
@@ -139,8 +141,6 @@ test.describe('Business Partners - Contact lifecycle', () => {
       await page.getByPlaceholder('Search').clear();
       await page.getByRole('button', { name: 'Filter', exact: true }).click();
       for (const field of [
-        'Section',
-        'Direct manager',
         'Rep',
         'Project',
         'Status',
@@ -151,7 +151,9 @@ test.describe('Business Partners - Contact lifecycle', () => {
         'City',
         'Chart of accounts linkage',
       ]) {
-        await expect(page.getByRole('combobox', { name: field, exact: true })).toBeVisible();
+        const name = field === 'Area' ? /^Area(?: \(Select a country first\))?$/
+          : field === 'City' ? /^City(?: \(Select an area first\))?$/ : field;
+        await expect(page.getByRole('combobox', { name, exact: true })).toBeVisible();
       }
 
       await page.getByRole('combobox', { name: 'Status', exact: true }).click();
