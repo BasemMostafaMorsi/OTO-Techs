@@ -32,7 +32,7 @@ const row = (p: Page, name: string) => rows(p).filter({ has: p.getByText(name, {
 
 async function action(p: Page, name: string, label: "Edit" | "Delete") {
   await row(p, name).getByRole("button", { name: "more", exact: true }).click();
-  await p.getByText(label, { exact: true }).click();
+  await p.getByRole("menuitem", { name: label, exact: true }).click();
 }
 
 async function deleteUnit(p: Page, name: string) {
@@ -95,9 +95,12 @@ async function matchList(p: Page, body: UnitList) {
   const records = body.data.collection;
   await expect(rows(p)).toHaveCount(records.length);
   for (const item of records) {
+    // Displayed # is the translation ID, not the unit's API ID.
+    // Match the business code, then verify the independent name and status.
     const current = rows(p).filter({
-      has: p.getByText("#" + item.id, { exact: true }),
-    });
+      has: p.getByRole("cell", { name: item.unit_code, exact: true }),
+    }).filter({ has: p.getByText(item.locale_unit_translates.name, {exact:true}) });
+    await expect(current).toHaveCount(1);
     await expect(current).toContainText(item.locale_unit_translates.name);
     await expect(current).toContainText(item.unit_code);
     await expect(current.locator("input.MuiSwitch-input")).toBeChecked({
@@ -218,6 +221,12 @@ test("secondary type reveals primary unit and conversion fields and requires a p
   await open(page);
   await button(page, "Create").click();
   await chooseType(page, "Secondary");
+  await page.getByRole("combobox", { name: /Unit type/i }).press("Tab");
+  await evidence("secondary-type-after-blur", {
+    expected: "Secondary",
+    actual: await page.getByRole("combobox", { name: /Unit type/i }).inputValue(),
+  });
+  await expect(page.getByRole("combobox", { name: /Unit type/i })).toHaveValue("Secondary");
   await expect(page.getByRole("combobox", { name: /Primary unit name/i })).toBeVisible();
   await expect(field(page, "Rate of change")).toHaveValue("1");
   await fillForm(page, "UOM-SECONDARY-" + Date.now(), "SECONDARY");
@@ -331,12 +340,27 @@ test("create edit cancel status reload and confirmed delete lifecycle", async ({
 
   try {
     await button(page, "Create").click();
-    await chooseType(page);
+    // Primary is already selected. Verify it instead of toggling it off by
+    // selecting the same option again.
+    await expect(page.getByRole("combobox", { name: /Unit type/i })).toHaveValue("Primary");
     await fillForm(page, name, code);
 
     const pending = mutationResponse(page, "POST");
+    const submitted = Promise.race([
+      pending,
+      page.getByText("Unit type is required", {exact:true})
+        .waitFor({state:"visible",timeout:30_000})
+        .then(async () => {
+          const selected = await page.getByRole("combobox", {name:/Unit type/i}).inputValue();
+          await evidence("unit-type-validation", {selected, message:"Unit type is required"});
+          throw new Error(`Unit type displays "${selected}" but submission rejects it: Unit type is required`);
+        }),
+    ]);
+    // Attach rejection handling before clicking; retain the response timeout for
+    // genuine network failures while surfacing synchronous validation failures.
+    submitted.catch(() => {});
     await button(page, "Submit").click();
-    const res = await pending;
+    const res = await submitted;
     const body = await res.json();
     id = String(body.data?.id ?? body.id ?? "");
 
@@ -384,8 +408,7 @@ test("create edit cancel status reload and confirmed delete lifecycle", async ({
     const editedCode = code + "E";
 
     await action(page, name, "Edit");
-    // Preserve the type mismatch above, then select the intended type so later workflows still run.
-    await chooseType(page, "Primary");
+    await expect(page.getByRole("combobox", { name: /Unit type/i })).toHaveValue("Primary");
     await fillForm(page, editedName, editedCode);
 
     const editPending = mutationResponse(page, "PUT");

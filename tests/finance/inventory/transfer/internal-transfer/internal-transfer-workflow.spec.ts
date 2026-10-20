@@ -178,7 +178,8 @@ test('warehouse status and combined filters match baseline and Reset restores ro
       await page.getByRole('button', {name: 'Filter', exact: true}).click();
       for (const [name, value] of variant.choices) {
         await page.getByRole('combobox', {name, exact: true}).click();
-        await page.getByRole('option', {name: value, exact: true}).click();
+        const warehouseId = name === 'Status' ? null : ({'مخزن الرياض': 1, 'مخزن جدة': 2, 'مخزن مكة': 3} as Record<string, number>)[value];
+        await page.getByRole('option', {name: warehouseId ? value + ' #' + warehouseId : value, exact: true}).click();
       }
       const pending = response(); await page.getByRole('button', {name: 'Submit', exact: true}).click(); const filtered = await pending;
       const expected = ids(baseline.collection.filter(variant.matches));

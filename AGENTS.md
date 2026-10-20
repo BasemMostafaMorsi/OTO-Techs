@@ -1,5 +1,8 @@
 # Luxora test workflow
 
+- User confirmation (2026-10-20): Creating Secondary units of measure is still
+  required. Do not remove its coverage or accept reverting to Primary on blur.
+
 - User confirmation (2026-10-19): Direct manager was intentionally removed from
   the Contacts filter. Do not require it or report its absence as a bug.
 

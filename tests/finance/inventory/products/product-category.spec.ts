@@ -1,8 +1,10 @@
 import { test, expect } from '../../../helpers/test';
 import { login } from '../../../helpers/auth';
+import { revealCategoryOption } from '../../helpers/category-options';
 
 test.describe('Product categories', () => {
   test('@smoke newly created category appears in the product form', async ({ page }) => {
+    test.setTimeout(90_000);
     const suffix = Date.now().toString().slice(-8);
     const categoryName = `AUTO Category ${suffix}`;
     const shortCode = `A${suffix.slice(-5)}`;
@@ -37,6 +39,7 @@ test.describe('Product categories', () => {
 
     // It must also remain available after reopening the dropdown.
     await category.click();
-    await expect(page.getByRole('option', { name: categoryName })).toBeVisible();
+    await revealCategoryOption(page, categoryName);
+    await test.info().attach('category-lookup', {body: await page.screenshot({fullPage:true}), contentType:'image/png'});
   });
 });

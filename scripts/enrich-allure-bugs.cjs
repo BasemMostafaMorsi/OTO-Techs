@@ -171,6 +171,18 @@ function enrich(directory = 'allure-results') {
         ['Open Units of Measure and create a unique UOM-E2E unit with type Primary, name and code.', 'Reload the list and verify that the unit is displayed as Primary.', 'Open the test unit action menu and choose Edit.', 'Inspect Unit type before changing any fields; compare edit-unit-type JSON and edit-unit-type-screen with the saved list.'],
         'Opening Edit for a saved Primary unit should display Primary. The observed form displays Secondary. The test records this mismatch, then explicitly selects Primary to continue verifying save, status changes and deletion without suppressing the original failure.'];
     }
+    const secondaryType = attachments.find(a => a.name === 'secondary-type-after-blur');
+    if (secondaryType) {
+      const evidence = JSON.parse(fs.readFileSync(path.join(directory, secondaryType.source), 'utf8'));
+      if (evidence.expected !== evidence.actual) definition = [null, 'Finance → Inventory → Configuration → Units of Measure', 'Functional / Unit type selection', 'High',
+        ['Open Units of Measure and click Create.', 'Open Unit type and select Secondary.', 'Move focus out of the Unit type field.', 'Inspect the selected type and the dependent primary-unit/conversion fields.'],
+        'Secondary must remain selected after leaving the field and allow the required secondary-unit workflow. The user confirmed on 2026-10-20 that creating Secondary units is still required.'];
+    }
+    if (attachments.some(a => a.name === 'unit-type-validation')) {
+      definition = [null, 'Finance → Inventory → Configuration → Units of Measure', 'Functional / Unit type validation', 'High',
+        ['Open Units of Measure and click Create.', 'Verify that Unit type displays Primary.', 'Enter a unique name and unit code.', 'Click Submit and inspect the validation message.'],
+        'A displayed, selected Primary unit type must satisfy required-type validation. The form should submit the valid unit, rather than report Unit type is required.'];
+    }
     if ((result.fullName || '').includes('stocktaking.spec.ts') && (result.statusDetails?.message || '').includes('Same-day date filter must retain')) {
       definition = [null, 'Finance → Inventory → Transfer → Stocktaking', 'Functional / Date filtering', 'Medium',
         ['Open Inventory → Transfer → Stocktaking.', 'Identify an existing record and its date in the attached baseline (observed record #2, 2026-10-07).', 'Open Filter and select that date as both the start and end date.', 'Submit and compare the returned records with the baseline.', 'Reset the filter and verify that the records return.'],
@@ -223,9 +235,10 @@ function enrich(directory = 'allure-results') {
       const failures = [...new Set(steps.filter(s => ['failed','broken'].includes(s.status))
         .map(s => s.statusDetails?.message).filter(Boolean))];
       if (!failures.length) failures.push(result.statusDetails?.message || 'The test did not complete successfully.');
+      if (type === 'Functional / Unit type validation' && result.statusDetails?.message && !failures.includes(result.statusDetails.message)) failures.unshift(result.statusDetails.message);
       const csvFailure = failures.some(message=>message.includes('CSV requires unique nonempty column names'));
       const staleAddressFailure = result.name.includes('changing country clears') && failures.some(message=>/Previous country (area|city) must not remain displayed/.test(message));
-      const title = classificationExport404 ? '[Classifications] Export returns HTTP 404 and no file downloads' : staleAddressFailure ? `[${(result.fullName || '').includes('vendors.spec.ts') ? 'Vendors' : 'Customers'}] Changing country leaves previous address selections visible` : csvFailure
+      const title = type === 'Functional / Unit type selection' ? '[Units of Measure] Secondary reverts to Primary after leaving the field' : type === 'Functional / Unit type validation' ? '[Units of Measure] Displayed Primary type is rejected as missing' : classificationExport404 ? '[Classifications] Export returns HTTP 404 and no file downloads' : staleAddressFailure ? `[${(result.fullName || '').includes('vendors.spec.ts') ? 'Vendors' : 'Customers'}] Changing country leaves previous address selections visible` : csvFailure
         ? '[Sales Invoice] Exported Excel/CSV column structure does not match the Sales Invoice report displayed on the UI'
         : `[${moduleName.split(' ? ').at(-1)}] ${steps.find(s=>s.status==='failed')?.name || result.name}`;
       const actions = csvFailure ? [

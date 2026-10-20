@@ -38,10 +38,10 @@ test('decimal total displays 0.3 for 0.1 plus 0.2',async({page},info)=>{
 });
 test('line totals update when changing and removing rows',async({page})=>{
  await form(page);await field(page,'0').fill('1.25');await page.getByRole('button',{name:'New',exact:true}).click();
- await field(page,'0').nth(1).fill('2.25');await expect(page.getByRole('row',{name:'Total 3.5',exact:true})).toBeVisible();
- await field(page,'0').nth(1).fill('3.25');await expect(page.getByRole('row',{name:'Total 4.5',exact:true})).toBeVisible();
+ await field(page,'0').nth(1).fill('2.25');await expect.poll(async()=>Number((await page.getByRole('row').filter({has:page.getByRole('cell',{name:'Total',exact:true})}).innerText()).replace('Total','').replace(/[\s,]/g,''))).toBe(3.5);
+ await field(page,'0').nth(1).fill('3.25');await expect.poll(async()=>Number((await page.getByRole('row').filter({has:page.getByRole('cell',{name:'Total',exact:true})}).innerText()).replace('Total','').replace(/[\s,]/g,''))).toBe(4.5);
  await page.locator('tbody tr').filter({has:field(page,'0')}).nth(1).locator('td').last().getByRole('button').click();
- await expect(field(page,'0')).toHaveCount(1);await expect(page.getByRole('row',{name:'Total 1.25',exact:true})).toBeVisible();
+ await expect(field(page,'0')).toHaveCount(1);await expect.poll(async()=>Number((await page.getByRole('row').filter({has:page.getByRole('cell',{name:'Total',exact:true})}).innerText()).replace('Total','').replace(/[\s,]/g,''))).toBe(1.25);
 });
 test('source types expose Account Bank and Treasury controls',async({page})=>{
  await form(page);await choose(page,'Type *','Bank');await expect(page.getByRole('combobox',{name:/Bank name/})).toBeVisible();

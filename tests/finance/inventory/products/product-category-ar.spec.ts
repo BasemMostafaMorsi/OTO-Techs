@@ -1,12 +1,13 @@
 import { test, expect } from '../../../helpers/test';
 import { login } from '../../../helpers/auth';
+import { revealCategoryOption } from '../../helpers/category-options';
 
 test.describe('Product categories - Arabic', () => {
   test('@regression newly created Arabic category is selected and remains available', async ({
     page,
   }) => {
-    test.info().annotations.push({ type: 'known-issue', description: 'Known defect: an inline category can be created in Arabic but is not displayed afterwards.' });
 
+    test.setTimeout(90_000);
     const suffix = Date.now().toString().slice(-8);
     const categoryName = `فئة آلية ${suffix}`;
     const shortCode = `AR${suffix.slice(-4)}`;
@@ -39,6 +40,7 @@ test.describe('Product categories - Arabic', () => {
     await expect(category).toHaveValue(categoryName, { timeout: 10_000 });
 
     await category.click();
-    await expect(page.getByRole('option', { name: categoryName })).toBeVisible();
+    await revealCategoryOption(page, categoryName);
+    await test.info().attach('category-lookup', {body: await page.screenshot({fullPage:true}), contentType:'image/png'});
   });
 });

@@ -89,14 +89,7 @@ async function choose(p: Page, name: string, filter = false) {
   await p
     .getByRole("combobox", { name: filter ? "Tags" : "Tags *", exact: true })
     .click();
-  const filterLabels: Record<string, string> = {
-    "Internal Transfer": "Internal transfers",
-    Manufacturing: "Manufactures",
-    Scrap: "Scrapes",
-    Stocktaking: "Stocktakings",
-  };
-  const label = filter ? (filterLabels[name] ?? name) : name;
-  await p.getByRole("option", { name: label, exact: true }).click();
+  await p.getByRole("option", { name, exact: true }).click();
   await p.keyboard.press("Escape");
 }
 async function action(p: Page, name: string, label: "Edit" | "Delete") {
