@@ -16,6 +16,7 @@ on:
         options:
           - login
           - business-partners
+          - finance
           - manufacturing
           - internal-transfers
           - full-business

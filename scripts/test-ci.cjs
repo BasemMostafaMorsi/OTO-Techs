@@ -6,6 +6,7 @@ const suites = {
   unit: ['tests/finance/unit'],
   login: ['tests/smoke/auth.spec.ts'],
   'business-partners': ['tests/business-partners'],
+  finance: ['tests/finance'],
   manufacturing: ['tests/finance/inventory/transfer/manufacturing'],
   'internal-transfers': ['tests/finance/inventory/transfer/internal-transfer'],
   'full-business': ['tests'],
