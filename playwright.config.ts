@@ -56,7 +56,8 @@ export default defineConfig({
     baseURL: process.env.BASE_URL ?? "https://luxora.poweritech.com",
     // Temporary opt-in for a test environment with an untrusted certificate.
     ignoreHTTPSErrors: process.env.LUXORA_IGNORE_HTTPS_ERRORS === "1",
-    headless: false,
+    // GitHub runners have no display; keep the browser visible locally.
+    headless: isCI,
     screenshot: "on",
     video: isCI || lightweightArtifacts ? "off" : "retain-on-failure",
     trace: isCI
