@@ -29,7 +29,43 @@ jobs:
     name: Offline unit tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: write
     steps:
+      - name: Remove reports from older completed runs
+        if: github.repository == 'Power-vision/automation_test' && github.event_name != 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const repo = context.repo;
+            const { data: current } = await github.rest.actions.getWorkflowRun({
+              ...repo, run_id: context.runId
+            });
+            const artifacts = await github.paginate(
+              github.rest.actions.listArtifactsForRepo, { ...repo, per_page: 100 }
+            );
+            const runs = new Map();
+            let removed = 0;
+            for (const artifact of artifacts) {
+              if (!/^(unit-reports-|website-)/.test(artifact.name)) continue;
+              const runId = artifact.workflow_run?.id;
+              if (!runId || runId === context.runId) continue;
+              if (!runs.has(runId)) {
+                const { data } = await github.rest.actions.getWorkflowRun({ ...repo, run_id: runId });
+                runs.set(runId, data);
+              }
+              const run = runs.get(runId);
+              if (run.workflow_id !== current.workflow_id || run.status !== 'completed') continue;
+              if (Date.parse(run.created_at) >= Date.parse(current.created_at)) continue;
+              try {
+                await github.rest.actions.deleteArtifact({ ...repo, artifact_id: artifact.id });
+                removed++;
+              } catch (error) {
+                if (error.status !== 404) throw error;
+              }
+            }
+            core.info(`Removed ${removed} old report artifacts; current and active runs preserved.`);
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
