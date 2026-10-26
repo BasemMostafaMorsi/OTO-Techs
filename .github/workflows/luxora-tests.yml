@@ -2,7 +2,7 @@ name: Luxora tests
 
 on:
   schedule:
-    - cron: "0 6 * * *"
+    - cron: "0 9 * * *"
       timezone: Africa/Cairo
   push:
     branches: [main]
@@ -80,17 +80,26 @@ jobs:
       - run: npm ci
       - run: npm run test:ci -- unit
       - name: Upload unit reports
+        id: unit-report-upload
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: unit-reports-${{ github.run_id }}-${{ github.run_attempt }}
-          retention-days: 7
+          retention-days: 1
           if-no-files-found: warn
           path: |
             allure-report/
             allure-results/
             playwright-report/
             test-results/
+      - name: Report unit artifact upload failure
+        if: always() && steps.unit-report-upload.outcome == 'failure'
+        shell: bash
+        run: |
+          echo "::warning::Unit report upload failed. Test results remain in the job log; website tests can proceed if unit tests passed. Check Actions storage quota."
+          echo "### Unit report unavailable" >> "$GITHUB_STEP_SUMMARY"
+          echo "Artifact upload failed. Review the upload step and Actions storage quota. Unit test failures still fail this job." >> "$GITHUB_STEP_SUMMARY"
 
   website:
     name: Website tests
@@ -137,7 +146,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: website-${{ env.SUITE }}-${{ github.run_id }}-${{ github.run_attempt }}
-          retention-days: 7
+          retention-days: 1
           if-no-files-found: warn
           path: |
             allure-report/
