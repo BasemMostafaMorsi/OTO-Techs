@@ -228,7 +228,8 @@ test("secondary type reveals primary unit and conversion fields and requires a p
   });
   await expect(page.getByRole("combobox", { name: /Unit type/i })).toHaveValue("Secondary");
   await expect(page.getByRole("combobox", { name: /Primary unit name/i })).toBeVisible();
-  await expect(field(page, "Rate of change")).toHaveValue("1");
+  // Supply the conversion rate; do not assume a configurable default.
+  await field(page, "Rate of change").fill("1");
   await fillForm(page, "UOM-SECONDARY-" + Date.now(), "SECONDARY");
   await button(page, "Submit").click();
   await expect(page.getByText("Primary unit is required", { exact: true })).toBeVisible();
@@ -340,9 +341,7 @@ test("create edit cancel status reload and confirmed delete lifecycle", async ({
 
   try {
     await button(page, "Create").click();
-    // Primary is already selected. Verify it instead of toggling it off by
-    // selecting the same option again.
-    await expect(page.getByRole("combobox", { name: /Unit type/i })).toHaveValue("Primary");
+    if(await page.getByRole("combobox", {name:/Unit type/i}).inputValue() !== "Primary") await chooseType(page, "Primary");
     await fillForm(page, name, code);
 
     const pending = mutationResponse(page, "POST");

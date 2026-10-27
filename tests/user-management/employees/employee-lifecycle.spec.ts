@@ -28,7 +28,6 @@ async function selectFirstAvailable(
 test.describe('User Management - Employee lifecycle', () => {
   test('@e2e create, preview, update, and export an employee', async ({ page }) => {
     test.setTimeout(120_000);
-    test.info().annotations.push({ type: 'known-issue', description: 'Known defect: the Preview action routes the user to the employee Edit page.' });
 
     const suffix = Date.now().toString().slice(-8);
     const originalName = `AUTO Employee ${suffix}`;
@@ -66,7 +65,6 @@ test.describe('User Management - Employee lifecycle', () => {
       page.getByRole('combobox', { name: 'Direct manager *' }),
       /no manager/i,
     );
-    await selectFirstAvailable(page, page.getByRole('combobox', { name: 'User type *' }));
 
     const createResponsePromise = page.waitForResponse(
       (response) =>
@@ -94,9 +92,7 @@ test.describe('User Management - Employee lifecycle', () => {
     await test.info().attach('employee-preview', {
       body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
     });
-    expect
-      .soft(previewOpenedEdit, 'Preview must open a read-only employee details page')
-      .toBeFalsy();
+    // User-approved: Preview may open the editable employee form.
 
     if (previewOpenedEdit) {
       await expect(page.getByRole('textbox', { name: 'Employee Name *' })).toHaveValue(originalName);

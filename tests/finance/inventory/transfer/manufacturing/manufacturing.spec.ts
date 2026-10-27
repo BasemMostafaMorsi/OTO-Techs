@@ -1,3 +1,6 @@
+import {inventorySettings} from '../../../helpers/inventory-settings';
+let currentSettings:Record<string,string>;
+import {inventoryInput} from '../../../helpers/inventory-columns';
 import {test, expect, Page} from '../../../../helpers/test';
 import {login} from '../../../../helpers/auth';
 
@@ -70,7 +73,7 @@ async function removeOwned(page: Page, id: string, ref: string) {
   await expect(page.getByRole('button', {name: '0/0', exact: true})).toBeVisible();
 }
 
-test.beforeEach(async ({page}) => { test.setTimeout(150000); await login(page); });
+test.beforeEach(async ({page}) => { test.setTimeout(150000); await login(page);currentSettings=await inventorySettings(page, "Manufacturing"); });
 test.afterEach(async ({page}, info) => {
   const path = info.outputPath('manufacturing-screen.png');
   await page.screenshot({path, fullPage: true});
@@ -79,7 +82,7 @@ test.afterEach(async ({page}, info) => {
 
 test('creation defaults expose source output scrap and draft actions', async ({page}) => {
   await create(page);
-  await expect(field(page, 'Date *')).toBeEditable();
+  await expect(field(page,'Date *')).toBeEnabled({enabled:currentSettings.can_change_date==='1'});
   await expect(field(page, 'Date *')).toHaveValue(/\d{2}\/\d{2}\/\d{4}/);
   for (const name of ['Ref No', 'Batch number', 'Notes']) await expect(field(page, name)).toBeEmpty();
   await expect(page.getByRole('checkbox', {name: 'Scrap', exact: true})).toBeChecked();
@@ -95,7 +98,7 @@ test('blank draft validates warehouses products quantities and output prices', a
   page.on('request', r => { if (r.method() === 'POST' && r.url().endsWith(api)) writes.push(r.url()); });
   await draft(page); await page.keyboard.press('Escape');
   for (const text of ['Warehouse is required', 'Product name is required', 'Quantity is required']) await expect(page.getByText(text, {exact: true})).toHaveCount(3);
-  await expect(page.getByText('Unit price is required', {exact: true})).toHaveCount(2);
+  for(const current of await page.getByRole('table').all()){const price=await inventoryInput(current,'Unit price');await expect(price).toHaveAttribute('aria-invalid','true');await expect(current.getByText('Unit price is required',{exact:true})).toBeVisible();}
   expect(writes).toEqual([]);
 });
 
@@ -115,7 +118,7 @@ test('disabling scrap removes its fields from blank draft validation', async ({p
   await expect(page.getByRole('table')).toHaveCount(2);
   await draft(page); await page.keyboard.press('Escape');
   for (const text of ['Warehouse is required', 'Product name is required', 'Quantity is required']) await expect(page.getByText(text, {exact: true})).toHaveCount(2);
-  await expect(page.getByText('Unit price is required', {exact: true})).toHaveCount(1);
+  for(const current of await page.getByRole('table').all()){const price=await inventoryInput(current,'Unit price');await expect(price).toHaveAttribute('aria-invalid','true');await expect(current.getByText('Unit price is required',{exact:true})).toBeVisible();}
   await page.getByRole('checkbox', {name: 'Scrap', exact: true}).check();
   await expect(page.getByRole('table')).toHaveCount(3);
   await expect(rows(page, 2)).toHaveCount(1);
@@ -143,8 +146,8 @@ test('no-match search and clear restore the manufacturing list', async ({page}) 
 test('source and output readonly balances match their warehouse stock', async ({page}, info) => {
   const data = await prepared(page);
   const stock = (product: any, id: number) => Number(product.stock_details.find((s: any) => s.warehouse_id === id)?.stock ?? 0);
-  const sourceBalance = table(page, 0).getByRole('textbox').nth(1);
-  const outputBalance = table(page, 1).getByRole('textbox').nth(2);
+  const sourceBalance = await inventoryInput(table(page, 0), 'Balance before');
+  const outputBalance = await inventoryInput(table(page, 1), 'Balance before');
   await expect(sourceBalance).toHaveAttribute('readonly', '');
   await expect(outputBalance).toHaveAttribute('readonly', '');
   await expect.poll(async () => Number(await sourceBalance.inputValue())).toBe(stock(data.source, 1));

@@ -1,3 +1,4 @@
+import {inventoryInput} from '../../../helpers/inventory-columns';
 import {test, expect, Page} from '../../../../helpers/test';
 import {login} from '../../../../helpers/auth';
 
@@ -95,7 +96,7 @@ for (const quantity of ['0', '-1']) {
 test('source warehouse changes refresh readonly balance from product stock details', async ({page}, info) => {
   const data = await prepare(page);
   const stock = (id: number) => Number(data.stock_details.find((s: {warehouse_id: number}) => s.warehouse_id === id).stock);
-  const balance = item(page).getByRole('textbox').nth(1);
+  const balance = await inventoryInput(page.getByRole('table').first(), 'Balance before');
   await expect(balance).toHaveAttribute('readonly', '');
   await expect.poll(async () => Number(await balance.inputValue())).toBe(stock(1));
   await warehouse(page, 'To warehouse *', 'مخزن مكة #3');

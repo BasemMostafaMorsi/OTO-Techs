@@ -1,5 +1,9 @@
 # Luxora test workflow
 
+- User confirmation (2026-10-27): Financial Period Year was recently added. Select the configured year (or current Cairo year when unset) before Finance Settings Save / Save all, then verify persistence. Do not classify the old missing-year setup as an application bug.
+
+- User confirmation (2026-10-27): Employee Preview opening the editable employee form is accepted behavior. Do not require a read-only destination or classify this navigation as a bug. Preserve verification of the selected employee data and saved edits.
+
 - User confirmation (2026-10-20): Creating Secondary units of measure is still
   required. Do not remove its coverage or accept reverting to Primary on blur.
 

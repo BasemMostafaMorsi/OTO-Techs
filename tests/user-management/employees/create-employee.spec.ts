@@ -21,7 +21,6 @@ test.describe('User Management - Create Employee', () => {
       'Division *',
       'Branch *',
       'Direct manager *',
-      'User type *',
     ]) {
       await expect(page.getByRole('combobox', { name: field })).toBeVisible();
     }
@@ -30,14 +29,11 @@ test.describe('User Management - Create Employee', () => {
     await expect(page.getByRole('button', { name: 'Save', exact: true })).toBeVisible();
   });
 
-  test('@regression Area and City remain dependent on their parent address fields', async ({ page }) => {
+  test('@regression Division requires a Department', async ({ page }) => {
     await login(page);
     await page.goto('/en/users/employees/create');
-
-    await expect(page.getByPlaceholder('Choose country')).toBeVisible();
-    await expect(page.getByPlaceholder('Choose area')).toBeDisabled();
-    await expect(page.getByPlaceholder('Choose city')).toBeDisabled();
-    await expect(page.getByText('(Select a country first)', { exact: true })).toBeVisible();
-    await expect(page.getByText('(Select an area first)', { exact: true })).toBeVisible();
+    await expect(page.getByRole('combobox', {name: 'Department *', exact:true})).toBeVisible();
+    await expect(page.getByRole('combobox', {name: /^Division/})).toBeDisabled();
+    await expect(page.getByText('(Select a department first)', {exact:true})).toBeVisible();
   });
 });

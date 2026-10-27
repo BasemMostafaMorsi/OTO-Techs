@@ -133,7 +133,7 @@ const cases = [
     'The converted order should retain the product and quantity and populate the saved product unit. This scenario verifies unit propagation; no purchase-price or total mismatch is inferred from a missing unit.'],
   ['employee-lifecycle.spec.ts', 'User Management ? Employees', 'Functional / Navigation', 'Medium',
     ['Create a uniquely named test employee.', 'Locate the employee in the list.', 'Open the action menu and choose Preview.', 'Check the destination URL and whether the page is editable.'],
-    'Preview should open a read-only details page; Edit should open the editable form.'],
+    'Preview may open the editable employee form (user-approved). The selected employee details must match, and saved edits must persist.'],
 ];
 const flatten = (steps = []) => steps.flatMap(step => [step, ...flatten(step.steps)]);
 function executionIssue(result, steps) {

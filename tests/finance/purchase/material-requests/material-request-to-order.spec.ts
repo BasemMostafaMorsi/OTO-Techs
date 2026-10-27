@@ -13,7 +13,8 @@ test.describe('Material Request conversion', () => {
 
     await login(page);
     await page.goto('/en/finance/inventory/inventory-managment/products-services');
-    await page.getByText('gold', {exact:true}).click();
+    await page.getByPlaceholder('Search',{exact:true}).fill('gold');
+    await page.getByRole('row').filter({hasText:'#P-0004'}).getByText('gold',{exact:true}).click();
     const sourceUnit = page.getByRole('combobox', {name:'Unit of measure *',exact:true});
     await expect(sourceUnit).not.toHaveValue('');
     const expectedUnit = await sourceUnit.inputValue();
