@@ -1,5 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
+const { formatBugReport } = require('./bug-report-template.cjs');
 
 const cases = [
   ['quotations.spec.ts', 'Finance → Sales → Quotations', 'Investigation required / Quotation workflow', 'Untriaged',
@@ -142,7 +143,7 @@ function executionIssue(result, steps) {
   const execution = message => /(?:page\.(?:goto|reload|screenshot|waitForResponse)|locator\.(?:click|fill|waitFor)|browserType\.launch).*Timeout|Target (?:page|closed)|browser has been closed|net::ERR_|ECONNRESET|ENOTFOUND|element\(s\) not found|waiting for.*(?:loading|spinner)/is.test(message);
   const responseUnavailable = message => /response\.(?:json|body|text):.*(?:Network\.getResponseBody|Response body is not available|No resource with given identifier)/is.test(message);
   const setupOrSession = message => /(?:"(?:beforeAll|beforeEach|afterAll|afterEach)" hook timeout|Test timeout of \d+ms exceeded|Protocol error.*(?:session closed|Target closed))/is.test(message);
-  const hostResource = message => /ENOSPC|no space left on device|heap out of memory/i.test(message);
+  const hostResource = message => /ENOSPC|no space left on device|heap out of memory|Login readiness failed after two page loads/i.test(message);
   const warehousePlaceholder = message => (result.fullName || '').includes('warehouses.spec.ts') && result.name === 'name search no-match and clear restore records' && /Locator:.*locator\('tbody tr'\)/s.test(message) && /Expected: 0/.test(message) && /Received: 1/.test(message);
   return messages.length > 0 && messages.every(message => execution(message) || responseUnavailable(message) || setupOrSession(message) || hostResource(message) || warehousePlaceholder(message));
 }
@@ -197,7 +198,7 @@ function enrich(directory = 'allure-results') {
     if ((result.fullName || '').includes('scrap.spec.ts') && (result.statusDetails?.message || '').includes('Balance before should match')) {
       definition = [null, 'Finance → Inventory → Transfer → Scrap', 'Functional / Historical balance display', 'Medium',
         ['Open Inventory → Transfer → Scrap.', 'Open the Completed record identified in scrap-detail-source (observed record #2).', 'Inspect the gold item quantity and Balance before.', 'Compare Balance before with scrape_items.balance_before in the saved detail response.'],
-        'Balance before should show the persisted pre-transaction balance for this scrap item. The observed UI value 300 differs from the saved balance_before value 190; this does not establish that stock was incorrectly posted.'];
+        'Balance before should show the persisted pre-transaction balance for this scrap item. Compare the observed values in this run’s attachments; the discrepancy does not establish that stock was incorrectly posted. Historical-versus-current balance semantics require confirmation.'];
     }
     if ((result.fullName || '').includes('journal-items.spec.ts') && (result.statusDetails?.message || '').includes('Account names displayed in Journal Items')) {
       definition = [null, 'Finance → Accounting → Journal Items', 'Functional / Account name display', 'Medium',
@@ -303,6 +304,7 @@ function enrich(directory = 'allure-results') {
         markdown = `**Title:** ${title}\n\n**Module:** Finance → Accounting → Accounts\n**Type:** Functional / Filtering\n**Severity:** Medium\n**Priority:** Medium\n\n**Steps to Reproduce:**\n\n${actions.map((s,i)=>`${i+1}. ${s}`).join('\n')}\n\n**Actual Result:**\n\n${actual.map(s=>'- '+s).join('\n')}\n\n**Expected Result:**\n\n- ${cashflow ? 'Return only accounts belonging to the selected Cash flow category.' : 'Exclude only zero balances; retain accounts with positive or negative nonzero balances.'}\n\n**Evidence:**\n\n- Review the attached comparison JSON and browser screenshots.\n`;
       }
     }
+    if (failed) markdown = formatBugReport(markdown, markdown.includes('**Type:** Execution / Loading / Automation'));
     if (diagnostics.length) {
       const messages = [...new Set(diagnostics.map(event => `${event.kind}: ${event.message}`))];
       markdown += `\n\n**Browser Diagnostics � separate from test outcome:**\n\n**Module:** ${moduleName}\n**Type:** Browser / HTTP / Environment\n**Severity:** Untriaged\n**Priority:** Untriaged\n\n**Steps to Reproduce:**\n\n1. Run this test in the configured browser.\n2. Inspect HTTP responses and the browser console during navigation.\n\n**Actual Result:**\n\n${messages.map(message=>'- '+message).join('\n\n')}\n\n**Expected Result:**\nPage requests should complete successfully and browser errors should be handled appropriately. Notification permission denial is an environment observation, not proof of a financial defect. Passing functional assertions do not clear these diagnostics.\n`;

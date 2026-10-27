@@ -15,7 +15,22 @@ function response(p: Page) {
     )
     .then(async (r) => {
       expect(r.ok()).toBeTruthy();
-      return (await r.json()).data;
+      const data = (await r.json()).data;
+      const url = new URL(r.url());
+      const headers = Object.fromEntries(Object.entries(await r.request().allHeaders())
+        .filter(([name]) => !name.startsWith(':') && name !== 'content-length'));
+      for (let current = data.meta.current_page + 1; current <= data.meta.last_page; current++) {
+        url.searchParams.set('page', String(current));
+        const nextResponse = await p.request.get(url.toString(), { headers });
+        expect(nextResponse.ok()).toBeTruthy();
+        const next = (await nextResponse.json()).data;
+        expect(next.meta.current_page).toBe(current);
+        expect(next.meta.total, 'Source total must remain stable during collection').toBe(data.meta.total);
+        data.collection.push(...next.collection);
+      }
+      expect(data.collection).toHaveLength(data.meta.total);
+      expect(new Set(data.collection.map((item: any) => item.id)).size).toBe(data.meta.total);
+      return data;
     });
 }
 async function open(p: Page) {
@@ -29,10 +44,16 @@ async function open(p: Page) {
   return data.collection;
 }
 async function match(p: Page, data: any) {
-  expect(
-    data.meta.last_page,
-    "Expand pagination coverage when fixture exceeds one page",
-  ).toBe(1);
+  for (let attempt = 0; await rows(p).count() < data.meta.total && attempt < data.meta.last_page; attempt++) {
+    const previous = await rows(p).count();
+    await p.getByRole('table').evaluate(table => {
+      let container = table.parentElement;
+      while (container && container.scrollHeight <= container.clientHeight) container = container.parentElement;
+      const scroll = container || document.scrollingElement;
+      if (scroll) scroll.scrollTop = scroll.scrollHeight;
+    });
+    await expect.poll(() => rows(p).count()).toBeGreaterThan(previous);
+  }
   await expect(rows(p)).toHaveCount(data.meta.total);
   for (const item of data.collection) {
     const row = rows(p).filter({
